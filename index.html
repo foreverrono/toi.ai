@@ -1036,6 +1036,23 @@ body::after{content:'';position:fixed;bottom:-140px;right:-140px;width:480px;hei
   <div class="content" id="content"></div>
 </div>
 
+<!-- FLOATING HOME BUTTON -->
+<button id="float-home" onclick="floatGoHome()" style="
+  display:none;position:fixed;bottom:22px;left:18px;z-index:9997;
+  background:rgba(11,11,20,0.92);border:0.5px solid rgba(123,108,255,0.35);
+  color:#a09aff;font-family:Helvetica,Arial,sans-serif;font-size:11px;
+  letter-spacing:0.08em;padding:9px 16px;border-radius:22px;cursor:pointer;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  box-shadow:0 4px 20px rgba(0,0,0,0.4),0 0 16px rgba(123,108,255,0.08);
+  transition:all 0.2s;display:none;align-items:center;gap:7px;
+">
+  <svg width="11" height="11" viewBox="0 0 14 14" fill="none" style="flex-shrink:0">
+    <path d="M1 6.5L7 1l6 5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M2.5 5.5V12a.5.5 0 00.5.5h3V9h2v3.5h3a.5.5 0 00.5-.5V5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  Home
+</button>
+
 <script>
 /* ── FIREBASE SYNC ─────────────────────────────────────────────────────────
    Fill in your Firebase config here (same project as the mobile app).
@@ -1923,6 +1940,7 @@ function landingPaymentFallback(plan){
 function landingPayment(plan){landingPaymentFallback(plan);}
 function doLock(){
   hist=[];currentUser=null;sfxNav();
+  showFloatHome(false);
   document.querySelectorAll('.sel-card-wrap').forEach(function(w){w.style.display='';});
   document.getElementById('admin-card-wrap').style.display='none';
   show('s-landing');
@@ -1948,7 +1966,18 @@ function launchDriverPortal(){
 function goBack(){
   sfxNav();
   if(backTarget==='submenu'){openMod(curMod);}
-  else{show('s-select');_animContent&&setTimeout(_animContent,10);}
+  else{showFloatHome(false);show('s-select');_animContent&&setTimeout(_animContent,10);}
+}
+function floatGoHome(){
+  sfxNav();
+  showFloatHome(false);
+  show('s-select');
+  _animContent&&setTimeout(_animContent,10);
+}
+function showFloatHome(visible){
+  var btn=document.getElementById('float-home');
+  if(!btn)return;
+  btn.style.display=visible?'flex':'none';
 }
 
 /* ════════════════════════════════════════
@@ -1962,6 +1991,7 @@ function openMod(m){
   pill.classList.add('active');
   document.getElementById('back-btn').textContent='← Home';
   backTarget='select';
+  showFloatHome(true);
   subMenuCache={};
   if(m==='chat')renderChat();
   else if(m==='personal')renderSubmenu('personal');
