@@ -659,6 +659,80 @@ body::after{content:'';position:fixed;bottom:-140px;right:-140px;width:480px;hei
 #help-send{background:var(--accent);border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.15s;}
 #help-send:hover{background:#6a5de8;}
 #help-send svg{fill:white;}
+
+/* ── MOBILE OPTIMIZATIONS ── */
+@media(max-width:640px){
+  /* Allow select + submenu screens to scroll on mobile */
+  #s-select{overflow-y:auto;justify-content:flex-start;-webkit-overflow-scrolling:touch;}
+  .sel-inner{padding:0 14px 32px;}
+  .sel-hdr{padding:14px 0 20px;}
+  .greeting{font-size:18px;}
+  .greeting-sub{font-size:11px;margin-bottom:14px;}
+
+  /* 2-column main module grid */
+  .sel-grid{grid-template-columns:1fr 1fr;gap:10px;}
+  .sel-card{padding:16px 14px;gap:7px;border-radius:10px;}
+  .sel-ic{font-size:20px;}
+  .sel-name{font-size:13px;}
+  .sel-desc{font-size:11px;}
+
+  /* 2-column sub-module grid, scrollable */
+  .submenu-wrap{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;align-items:flex-start;justify-content:flex-start;padding:14px 14px 80px;}
+  .submenu-inner{width:100%;max-width:100%;}
+  .sub-title{font-size:16px;}
+  .sub-desc{font-size:11px;margin-bottom:14px;}
+  .sub-grid{grid-template-columns:1fr 1fr;gap:10px;}
+  .sub-card{padding:14px 12px;gap:7px;border-radius:10px;}
+  .sub-ic{font-size:18px;}
+  .sub-name{font-size:12px;}
+  .sub-tag{font-size:10px;}
+
+  /* Compact module header */
+  .mod-hdr{padding:10px 14px;}
+  .mod-pill{display:none;}
+  .status-row{display:none;}
+
+  /* TMS tabs scroll horizontally */
+  .tms-topbar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:8px 12px;gap:6px;}
+  .tms-topbar::-webkit-scrollbar{display:none;}
+  .tms-tab{white-space:nowrap;flex-shrink:0;}
+  .tms-body{padding:14px 14px;}
+  .tms-kpi-grid{grid-template-columns:1fr 1fr;}
+  .tms-form-grid{grid-template-columns:1fr;}
+  .tms-two-col{flex-direction:column;gap:14px;}
+  .tms-fleet-grid{grid-template-columns:1fr 1fr;}
+
+  /* Chat */
+  .msgs{padding:14px 14px;}
+  .bubble{max-width:85%;font-size:14px;}
+  .input-area{padding:8px 12px 12px;}
+
+  /* Help FAB higher on mobile to avoid nav bar */
+  #help-fab{bottom:100px;}
+  #help-panel{bottom:156px;width:calc(100vw - 28px);}
+
+  /* PWA banner */
+  #pwa-banner{padding:12px 14px calc(12px + env(safe-area-inset-bottom));}
+
+  /* General content areas scrollable */
+  .gcontent{padding:16px 14px;}
+  .tms-wrap{overflow:hidden;}
+
+  /* Admin */
+  .adm-form-row{grid-template-columns:1fr;}
+  .adm-wrap{padding:16px 14px;}
+
+  /* Stat grid */
+  .stat-grid{grid-template-columns:1fr 1fr;max-width:100%;}
+  .permit-grid{grid-template-columns:1fr 1fr;max-width:100%;}
+}
+
+@media(max-width:400px){
+  .sel-grid{grid-template-columns:1fr 1fr;}
+  .sub-grid{grid-template-columns:1fr 1fr;}
+  .sel-card{padding:12px 10px;}
+  .sub-card{padding:12px 10px;}
+}
 </style>
 <script async src="https://js.stripe.com/v3/buy-button.js"></script>
 </head>
