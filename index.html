@@ -5656,7 +5656,7 @@ function tmsSamsara(){
     var on=tab===k;
     return '<button style="background:'+(on?'rgba(123,108,255,0.12)':'transparent')+';border:0.5px solid '+(on?'rgba(123,108,255,0.5)':'var(--border)')+';border-radius:20px;padding:4px 16px;color:'+(on?'var(--accent)':'var(--text3)')+';font-size:10px;letter-spacing:0.06em;cursor:pointer;transition:all 0.18s" onclick="window._smTab=\''+k+'\';tmsSamsara()">'+l+'</button>';
   }
-  var tabsHtml=tabBtn('vehicles','Vehicles')+tabBtn('drivers','Drivers')+tabBtn('hos','Hours of Service')+tabBtn('trips','Recent Trips');
+  var tabsHtml=tabBtn('map','Live Map')+tabBtn('vehicles','Vehicles')+tabBtn('drivers','Drivers')+tabBtn('hos','Hours of Service')+tabBtn('trips','Recent Trips');
   var bodyHtml='';
   if(tab==='vehicles'){
     var veh=window._smVehicles;
@@ -5756,6 +5756,13 @@ function tmsSamsara(){
         '<th class="tms-th">Drive Time (11h)</th><th class="tms-th">Shift (14h)</th><th class="tms-th">Cycle (70h)</th>'+
         '</tr></thead><tbody>'+hrows+'</tbody></table></div>';
     }
+  }else if(tab==='map'){
+    bodyHtml='<div id="sm-map-el" style="height:560px;border-radius:12px;overflow:hidden;border:0.5px solid var(--border);background:#1a1a2e"></div>'+
+      '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:10px;color:var(--text3);padding:0 2px">'+
+      '<span><span style="color:#4ef0c4">●</span> Moving</span>'+
+      '<span><span style="color:#ffc83c">●</span> Idling</span>'+
+      '<span><span style="color:rgba(255,255,255,0.3)">●</span> Offline / Parked</span>'+
+      '<span style="margin-left:auto">Click a truck to see details</span></div>';
   }else if(tab==='trips'){
     var trips=window._smTrips;
     if(!trips){
@@ -5805,6 +5812,7 @@ function tmsSamsara(){
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">'+tabsHtml+'</div>'+
     bodyHtml+
     '</div>';
+  if(tab==='map')setTimeout(_smInitMap,80);
 }
 async function smSync(){
   var btn=document.getElementById('sm-sync-btn');
@@ -5835,6 +5843,100 @@ async function smSync(){
   sfxSuccess();toast('Synced — '+count+' vehicle(s), '+dcount+' driver(s) ✓');
   if(btn){btn.disabled=false;btn.textContent='↓ Sync Now';}
   tmsSamsara();
+}
+function _smLoadLeaflet(cb){
+  if(window.L){cb();return;}
+  var link=document.createElement('link');link.rel='stylesheet';link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(link);
+  var script=document.createElement('script');script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  script.onload=cb;document.head.appendChild(script);
+}
+function _smInitMap(){
+  var el=document.getElementById('sm-map-el');
+  if(!el)return;
+  _smLoadLeaflet(function(){
+    var vehicles=window._smVehicles||[];
+    var withLoc=vehicles.filter(function(v){return v.location&&v.location.latitude;});
+    if(!withLoc.length){el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.3);font-size:13px">No location data — click Sync Now</div>';return;}
+    if(window._smMap){try{window._smMap.remove();}catch(e){}window._smMap=null;}
+    var map=L.map(el,{zoomControl:true,attributionControl:false});
+    window._smMap=map;
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(map);
+    var bounds=[];
+    withLoc.forEach(function(v){
+      var loc=v.location;
+      var lat=loc.latitude;var lng=loc.longitude;
+      var spd=loc.speed||0;var spdMph=spd*2.237;
+      var moving=spdMph>2;
+      var clr=moving?'#4ef0c4':'#ffc83c';
+      var driver=(v.staticAssignedDriver||{}).name||'Unassigned';
+      var addr=(loc.reverseGeo||{}).formattedLocation||'';
+      var lastTime=loc.time?new Date(loc.time).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+      var icon=L.divIcon({
+        className:'',
+        html:'<div style="position:relative;display:flex;flex-direction:column;align-items:center">'+
+          '<div style="background:#12121e;border:2px solid '+clr+';border-radius:6px;padding:3px 7px;font-size:11px;font-weight:700;color:'+clr+';font-family:monospace;white-space:nowrap;box-shadow:0 0 10px '+clr+'55">#'+v.name+'</div>'+
+          '<div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid '+clr+'"></div>'+
+          '<div style="width:6px;height:6px;border-radius:50%;background:'+clr+';box-shadow:0 0 6px '+clr+';margin-top:-1px"></div>'+
+          '</div>',
+        iconAnchor:[20,28],iconSize:[40,28]
+      });
+      var marker=L.marker([lat,lng],{icon:icon}).addTo(map);
+      marker.bindPopup(
+        '<div style="font-family:system-ui;min-width:200px">'+
+        '<div style="font-size:14px;font-weight:700;margin-bottom:6px">#'+v.name+' — '+v.year+' '+v.make+' '+v.model+'</div>'+
+        '<div style="font-size:11px;color:#888;margin-bottom:4px">'+addr+'</div>'+
+        '<div style="font-size:11px;margin-bottom:2px"><b>Driver:</b> '+driver+'</div>'+
+        '<div style="font-size:11px;margin-bottom:2px"><b>Speed:</b> '+(moving?spdMph.toFixed(0)+' mph':'Stopped')+'</div>'+
+        '<div style="font-size:11px;margin-bottom:2px"><b>Plate:</b> '+(v.licensePlate||'—')+'</div>'+
+        '<div style="font-size:10px;color:#888;margin-top:6px">Last update: '+lastTime+'</div>'+
+        '</div>'
+      ,{maxWidth:260});
+      bounds.push([lat,lng]);
+    });
+    if(bounds.length>1)map.fitBounds(bounds,{padding:[40,40]});
+    else map.setView(bounds[0],12);
+  });
+}
+function _smJurisdiction(addr){
+  if(!addr)return null;
+  var m=addr.match(/,\s*([A-Z]{2})(?:,\s*[A-Z0-9]{3,7})?$/);
+  return m?m[1]:null;
+}
+async function iftaImportSamsara(){
+  var btn=document.getElementById('ifta-samsara-btn');
+  if(btn){btn.disabled=true;btn.textContent='Importing…';}
+  var vehicles=window._smVehicles;
+  if(!vehicles||!vehicles.length){sfxError();toast('Open Operations → Samsara and Sync first');if(btn){btn.disabled=false;btn.textContent='↓ Import from Samsara';}return;}
+  var now=new Date();
+  var qMonth=now.getMonth();var qYear=now.getFullYear();
+  var qStart=new Date(qYear,Math.floor(qMonth/3)*3,1);
+  var startMs=qStart.getTime();var endMs=now.getTime();
+  toast('Fetching trips for Q'+(Math.floor(qMonth/3)+1)+' '+qYear+'…');
+  var jurMap={};var tripCount=0;var key=localStorage.getItem('API_KEY_SAMSARA')||'';
+  if(!key){sfxError();toast('Set Samsara key in Admin → Integrations');if(btn){btn.disabled=false;btn.textContent='↓ Import from Samsara';}return;}
+  for(var i=0;i<vehicles.length;i++){
+    var vid=vehicles[i].id;
+    var res=await _smFetch('/v1/fleet/trips?groupId=0&vehicleId='+vid+'&startMs='+startMs+'&endMs='+endMs);
+    if(!res.ok||!res.data||!res.data.trips)continue;
+    res.data.trips.forEach(function(t){
+      var distMi=(t.distanceMeters||0)/1609.34;
+      if(distMi<0.1)return;
+      var jur=_smJurisdiction(t.startLocation)||_smJurisdiction(t.endLocation);
+      if(!jur)return;
+      jurMap[jur]=(jurMap[jur]||0)+distMi;
+      tripCount++;
+    });
+  }
+  if(!Object.keys(jurMap).length){sfxError();toast('No trip data found for this quarter');if(btn){btn.disabled=false;btn.textContent='↓ Import from Samsara';}return;}
+  var entries=getIftaEntries();
+  var dateStr=qStart.toISOString().slice(0,10);
+  Object.keys(jurMap).forEach(function(jur){
+    entries.push({date:dateStr,jurisdiction:jur,miles:Math.round(jurMap[jur]),fuel:0,source:'Samsara'});
+  });
+  saveIftaEntries(entries);
+  sfxSuccess();toast('Imported '+tripCount+' trips across '+Object.keys(jurMap).length+' jurisdictions ✓');
+  if(btn){btn.disabled=false;btn.textContent='↓ Import from Samsara';}
+  iftaRenderEntries();
 }
 /* ── END SAMSARA ───────────────────────────────────────────── */
 function tmsEquipment(){
@@ -8107,7 +8209,8 @@ function tmsIFTA(){
   '<div class="tms-section-title">IFTA — International Fuel Tax Agreement</div>'+
   '<div class="tms-sub-note">Upload your trip/fuel CSV or PDF and AI will categorize by jurisdiction and calculate tax owed or credit per quarter.</div>'+
   '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">'+
-  '<button class="tms-btn primary" onclick="document.getElementById(\'ifta-file\').click()">📄 Upload CSV / TXT</button>'+
+  '<button class="tms-btn primary" id="ifta-samsara-btn" onclick="iftaImportSamsara()">↓ Import from Samsara</button>'+
+  '<button class="tms-btn" onclick="document.getElementById(\'ifta-file\').click()">📄 Upload CSV / TXT</button>'+
   '<input type="file" id="ifta-file" style="display:none" accept=".csv,.txt" onchange="iftaImport(this)">'+
   '<button class="tms-btn" onclick="iftaManualEntry()">+ Manual Entry</button>'+
   '</div>'+
