@@ -5320,6 +5320,7 @@ function tmsCustoms(){
       '</div>'+
       '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
         '<input style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:11px;outline:none;width:180px" placeholder="Search trips…" value="'+(window._bcSearch||'')+'" oninput="window._bcSearch=this.value;tmsCustoms()">'+
+        '<button class="tms-btn sm" onclick="bcSyncFromBorderConnect()">↓ Sync from BC</button>'+
         '<button class="tms-btn sm" onclick="bcRefreshAll()">↻ Refresh All</button>'+
         '<button class="tms-btn primary" id="bc-new-btn" onclick="window._bcShowForm=!window._bcShowForm;tmsCustoms()">'+(showForm?'✕ Cancel':'+ New Trip')+'</button>'+
       '</div>'+
@@ -5550,6 +5551,64 @@ async function bcRefreshAll(){
   }
   bcSaveManifests(manifests);
   sfxSuccess();toast('Refreshed '+updated+' trip(s) ✓');
+  tmsCustoms();
+}
+async function bcSyncFromBorderConnect(){
+  var key=localStorage.getItem('API_KEY_BORDERCONNECT')||'';
+  if(!key){sfxError();toast('No API key — set in Admin → Integrations');return;}
+  toast('Syncing manifests from BorderConnect…');
+  function _normTrip(raw,type){
+    var d=raw.driver||{};var t=raw.truck||{};var tr=(raw.trailer||[])[0]||{};var s=(raw.shipment||[])[0]||{};
+    var tripId=raw.tripNumber||raw.id||('BC-'+type+'-'+(raw.id||Date.now()));
+    var rawStatus=raw.status||raw.responseCode||raw.clearanceCode||'Active';
+    var status=rawStatus==='1P'||rawStatus==='1A'||rawStatus==='Cleared'||rawStatus==='CLEARED'?'Cleared':
+      rawStatus==='3'||rawStatus==='Secondary'?'Secondary':
+      rawStatus==='6'||rawStatus==='Hold'||rawStatus==='Exam'?'Exam':
+      rawStatus==='Submitted'||rawStatus==='SUBMITTED'?'Submitted':'Active';
+    var etaRaw=raw.estimatedArrivalDatetime||raw.eta||'';
+    var etaLocal=etaRaw?new Date(etaRaw).toISOString().slice(0,16):'';
+    var filedRaw=raw.filedDate||raw.created||raw.createdAt||'';
+    var filed=filedRaw?new Date(filedRaw).toLocaleDateString()+' '+new Date(filedRaw).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}):type+' import';
+    return{
+      id:tripId,type:type,
+      load:s.shipmentControlNumber||s.loadNumber||'',
+      driver:(d.firstName||'')+(d.lastName?' '+d.lastName:''),
+      port:raw.portOfEntry||raw.port||'',
+      eta:etaLocal,
+      commodity:s.description||s.commodity||'',
+      status:status,
+      error:'',
+      submitted:filed,
+      payload:raw,
+      response:null,
+      _synced:true
+    };
+  }
+  var existing=bcGetManifests();
+  var existingIds=existing.reduce(function(acc,m){acc[m.id]=true;return acc;},{});
+  var added=0;var updated=0;
+  for(var i=0;i<2;i++){
+    var type=i===0?'ACE':'ACI';
+    var result=await _bcFetch('GET',(type==='ACE'?'ACEhighway':'ACIhighway')+'/trip');
+    if(!result.ok){
+      if(result.error&&result.error.indexOf('CORS')!==-1)toast('CORS blocked — cannot pull '+type+' trips directly. Submit trips from this app to see them here.');
+      continue;
+    }
+    var trips=result.data;
+    if(!Array.isArray(trips))trips=trips&&(trips.trips||trips.data||trips.results)||[];
+    for(var j=0;j<trips.length;j++){
+      var norm=_normTrip(trips[j],type);
+      if(existingIds[norm.id]){
+        var idx=existing.findIndex(function(m){return m.id===norm.id;});
+        if(idx!==-1){existing[idx].status=norm.status;existing[idx].payload=norm.payload;updated++;}
+      }else{
+        existing.unshift(norm);existingIds[norm.id]=true;added++;
+      }
+    }
+  }
+  bcSaveManifests(existing);
+  if(added||updated){sfxSuccess();toast('Sync complete — '+added+' new, '+updated+' updated ✓');}
+  else{toast('All manifests already up to date');}
   tmsCustoms();
 }
 function tmsEquipment(){
