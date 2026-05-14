@@ -784,7 +784,7 @@ body::after{content:'';position:fixed;bottom:-140px;right:-140px;width:480px;hei
       </div>
       <div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:14px;padding:20px 18px;">
         <div style="font-size:22px;margin-bottom:8px">🚚</div>
-        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px">Supply Chain</div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px">Value Fleet</div>
         <div style="font-size:11px;color:var(--text3);line-height:1.5">Full TMS: loads, carriers, LTL 3D builder, load board, quotes, driver portal</div>
       </div>
       <div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:14px;padding:20px 18px;">
@@ -944,7 +944,7 @@ body::after{content:'';position:fixed;bottom:-140px;right:-140px;width:480px;hei
           <div class="hover-popup-title">Modules</div>
           <div class="hover-popup-item"><div class="hover-popup-dot"></div><span class="hover-popup-text">Software</span></div>
           <div class="hover-popup-item"><div class="hover-popup-dot"></div><span class="hover-popup-text">Entertainment</span></div>
-          <div class="hover-popup-item"><div class="hover-popup-dot"></div><span class="hover-popup-text">Supply Chain</span></div>
+          <div class="hover-popup-item"><div class="hover-popup-dot"></div><span class="hover-popup-text">Value Fleet</span></div>
           <div class="hover-popup-item"><div class="hover-popup-dot"></div><span class="hover-popup-text">Trading</span></div>
           <div class="hover-popup-item"><div class="hover-popup-dot"></div><span class="hover-popup-text">Real Estate · Finance · more</span></div>
         </div>
@@ -994,17 +994,16 @@ body::after{content:'';position:fixed;bottom:-140px;right:-140px;width:480px;hei
       </div>
       <div class="sel-card-wrap" id="client-card-wrap" style="display:none;">
         <div class="sel-card ripple-wrap" onmouseenter="sfxHover()" onclick="openMod('clientportal');ripple(this,event)">
-          <div class="sel-ic">📦</div>
-          <div class="sel-name">Client Portal</div>
-          <div class="sel-desc">Track shipments &amp; documents.</div>
+          <div class="sel-ic">🔩</div>
+          <div class="sel-name">Value Fleet Portal</div>
+          <div class="sel-desc">Parts, expenses &amp; payments.</div>
           <div class="c-shine"></div>
         </div>
         <div class="hover-popup">
           <div class="hover-popup-title">Features</div>
-          <div class="hover-popup-item"><div class="hover-popup-dot"></div><span class="hover-popup-text">My Shipments</span></div>
-          <div class="hover-popup-item"><div class="hover-popup-dot"></div><span class="hover-popup-text">Live Status</span></div>
-          <div class="hover-popup-item"><div class="hover-popup-dot"></div><span class="hover-popup-text">Track by Reference</span></div>
-          <div class="hover-popup-item"><div class="hover-popup-dot"></div><span class="hover-popup-text">Download Documents</span></div>
+          <div class="hover-popup-item"><div class="hover-popup-dot"></div><span class="hover-popup-text">My Expenses</span></div>
+          <div class="hover-popup-item"><div class="hover-popup-dot"></div><span class="hover-popup-text">Parts Needed (AI)</span></div>
+          <div class="hover-popup-item"><div class="hover-popup-dot"></div><span class="hover-popup-text">Invoices &amp; Payment</span></div>
         </div>
       </div>
     </div>
@@ -1118,7 +1117,7 @@ var _fbDB=null;
 function _fbPushTMS(){
   if(!FB_ENABLED||!_fbDB)return;
   var D=window.TMS_DATA||{};
-  _fbDB.ref('tms').set({loads:D.loads||[],drivers:D.drivers||[],equipment:D.equipment||[],driverPayRate:D.driverPayRate||28,finances:D.finances||{}}).catch(function(e){console.warn('[toi] FB write:',e.message);});
+  _fbDB.ref('tms').set({loads:D.loads||[],drivers:D.drivers||[],equipment:D.equipment||[],driverPayRate:D.driverPayRate||28,finances:D.finances||{},partsRequests:D.partsRequests||[],clientInvoices:D.clientInvoices||[]}).catch(function(e){console.warn('[toi] FB write:',e.message);});
 }
 function _fbPushUsers(){
   if(!FB_ENABLED||!_fbDB)return;
@@ -1136,6 +1135,8 @@ function _fbListenTMS(){
     if(d.loads&&d.loads.length>=D.loads.length){D.loads=d.loads;}
     /* Always merge driver payLog and stats from remote */
     if(d.drivers){d.drivers.forEach(function(fd){var loc=D.drivers.find(function(x){return x.id===fd.id;});if(loc){loc.payLog=fd.payLog||loc.payLog;loc.stats=fd.stats||loc.stats;loc.status=fd.status||loc.status;}});}
+    if(d.partsRequests)D.partsRequests=d.partsRequests;
+    if(d.clientInvoices)D.clientInvoices=d.clientInvoices;
   });
 }
 
@@ -1627,7 +1628,7 @@ async function speakAI(text){
    ════════════════════════════════════════ */
 function seedDefaultUsers(){
   var allP=['memories','translate','health','finances','permits','legal'];
-  var allB=['software','codestudio','entertainment','supplychain','tech','trading','realestate','bizfinance','clothes','food','fitness','bizlegal'];
+  var allB=['software','codestudio','entertainment','supplychain','valuefleet','tech','trading','realestate','bizfinance','clothes','food','fitness','bizlegal'];
   var full={all:true,chat:true,personal:allP,business:allB};
   TOI_USERS=[
     {id:'u_ahsan',name:'Ahsan',password:'ahsan',role:'superadmin',access:full},
@@ -1647,7 +1648,7 @@ function seedDefaultUsers(){
 function patchUsers(){
   /* Add any missing default users to existing installations */
   var allP=['memories','translate','health','finances','permits','legal'];
-  var allB=['software','codestudio','entertainment','supplychain','tech','trading','realestate','bizfinance','clothes','food','fitness','bizlegal'];
+  var allB=['software','codestudio','entertainment','supplychain','valuefleet','tech','trading','realestate','bizfinance','clothes','food','fitness','bizlegal'];
   var full2={all:true,chat:true,personal:allP,business:allB};
   var defaults=[
     {id:'u_mosa',name:'Mosa',password:'mosa',role:'superadmin',access:full2},
@@ -1707,10 +1708,10 @@ function applyClientAccess(){
     var dc=document.getElementById('driver-card-wrap');if(dc)dc.style.display='';
     subMenuCache={};return;
   }
-  /* Upgrade stale supplychain-only clients to clientportal */
+  /* Upgrade stale valuefleet-only clients to clientportal */
   if(role==='client'){
     var acc0=currentUser.access||{};
-    if(!acc0.chat&&(!acc0.personal||!acc0.personal.length)&&acc0.business&&acc0.business.join&&acc0.business.join(',').replace(/supplychain/g,'')===''){
+    if(!acc0.chat&&(!acc0.personal||!acc0.personal.length)&&acc0.business&&acc0.business.join&&acc0.business.join(',').replace(/valuefleet/g,'')===''){
       currentUser.role='clientportal';role='clientportal';
     }
   }
@@ -1809,7 +1810,7 @@ var _demoSlides=[
       +'<div style="padding:8px 12px;font-size:8px;color:#7a78a0;letter-spacing:0.12em;border-bottom:0.5px solid rgba(255,255,255,0.05);background:#0b0b14">BUSINESS MODULES</div>'
       +'<div style="padding:8px">'
       +'<div style="font-size:8px;color:#7a78a0;letter-spacing:0.1em;padding:4px 8px;margin-bottom:2px">OPERATIONS</div>'
-      +'<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;cursor:pointer;background:rgba(123,108,255,0.05)"><span style="font-size:14px">🚛</span><div style="flex:1"><div style="font-size:9px;color:#f0eeff">Supply Chain</div><div style="font-size:8px;color:#7a78a0">TMS · Loads · Drivers · IFTA</div></div><span style="font-size:10px;color:#7a78a0">›</span></div>'
+      +'<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;cursor:pointer;background:rgba(123,108,255,0.05)"><span style="font-size:14px">🔩</span><div style="flex:1"><div style="font-size:9px;color:#f0eeff">Value Fleet</div><div style="font-size:8px;color:#7a78a0">Parts · Expenses · Payments · TMS</div></div><span style="font-size:10px;color:#7a78a0">›</span></div>'
       +'<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px"><span style="font-size:14px">📊</span><div style="flex:1"><div style="font-size:9px;color:#f0eeff">Overview</div><div style="font-size:8px;color:#7a78a0">All finances · birds-eye view</div></div><span style="font-size:10px;color:#7a78a0">›</span></div>'
       +'<div style="font-size:8px;color:#7a78a0;letter-spacing:0.1em;padding:4px 8px;margin-top:4px;margin-bottom:2px">MARKETS</div>'
       +'<div style="display:flex;gap:5px">'
@@ -2028,7 +2029,7 @@ function showFloatHome(visible){
    ════════════════════════════════════════ */
 function openMod(m){
   curMod=m;sfxNav();
-  var pills={chat:'Chat · rono.v1',personal:'Personal · rono.v1',business:'Business · rono.v1',admin:'Admin · rono.v1',driver:'Driver Portal · rono.v1',clientportal:'Client Portal · rono.v1'};
+  var pills={chat:'Chat · rono.v1',personal:'Personal · rono.v1',business:'Business · rono.v1',admin:'Admin · rono.v1',driver:'Driver Portal · rono.v1',clientportal:'Value Fleet Portal · rono.v1'};
   var pill=document.getElementById('mod-pill');
   pill.textContent=pills[m]||'rono.v1';
   pill.classList.add('active');
@@ -2066,7 +2067,7 @@ function openSub(key){
   backTarget='submenu';
   var bLabel=curMod==='personal'?'Personal':'Business';
   document.getElementById('back-btn').textContent='← '+bLabel;
-  var labels={goals:'Goals',translate:'Translate',health:'Health',finances:'Finances',permits:'Permits',memories:'Memories',software:'Software',entertainment:'Entertainment',supplychain:'Supply Chain',tech:'Tech',trading:'Trading',realestate:'Real Estate',bizfinance:'Finance',bizoverview:'Overview',clothes:'Clothes',food:'Food',fitness:'Fitness',wisdom:'Wisdom',legal:'Legal',bizlegal:'Legal'};
+  var labels={goals:'Goals',translate:'Translate',health:'Health',finances:'Finances',permits:'Permits',memories:'Memories',software:'Software',entertainment:'Entertainment',supplychain:'Supply Chain',valuefleet:'Value Fleet',tech:'Tech',trading:'Trading',realestate:'Real Estate',bizfinance:'Finance',bizoverview:'Overview',clothes:'Clothes',food:'Food',fitness:'Fitness',wisdom:'Wisdom',legal:'Legal',bizlegal:'Legal'};
   var pill=document.getElementById('mod-pill');
   pill.textContent=(labels[key]||key)+' · rono.v1';
   pill.classList.add('active');
@@ -2080,6 +2081,7 @@ function openSub(key){
   else if(key==='software')renderSoftware();
   else if(key==='codestudio')renderCodeStudio();
   else if(key==='supplychain')renderSupplyChain();
+  else if(key==='valuefleet')renderValueFleet();
   else if(key==='clothes')renderClothes();
   else if(key==='trading')renderTrading();
   else if(key==='tech')renderTech();
@@ -2114,7 +2116,8 @@ function renderSubmenu(mod){
     {key:'software',ic:'💻',name:'Software',tag:'Dev-mode · AI builds'},
     {key:'codestudio',ic:'</>',name:'Code Studio',tag:'Chat to code · live editor'},
     {key:'entertainment',ic:'🎮',name:'Entertainment',tag:'Creative sandbox · AI'},
-    {key:'supplychain',ic:'🚛',name:'Supply Chain',tag:'Logistics + customs'},
+    {key:'supplychain',ic:'🚛',name:'Supply Chain',tag:'Logistics · TMS · dispatch'},
+    {key:'valuefleet',ic:'🔩',name:'Value Fleet',tag:'Parts · Expenses · Payments'},
     {key:'tech',ic:'⚙️',name:'Tech',tag:'Gadget projects · database'},
     {key:'trading',ic:'📈',name:'Trading',tag:'Stocks · portfolio · log'},
     {key:'realestate',ic:'🏠',name:'Real Estate',tag:'Property management'},
@@ -2126,7 +2129,7 @@ function renderSubmenu(mod){
     {key:'bizlegal',ic:'⚖️',name:'Legal',tag:'Corporate law · contracts'},
   ];
   var bizCategories=[
-    {label:'Operations',keys:['bizoverview','supplychain','bizfinance','bizlegal']},
+    {label:'Operations',keys:['bizoverview','supplychain','valuefleet','bizfinance','bizlegal']},
     {label:'Technology',keys:['software','codestudio','tech']},
     {label:'Markets',keys:['trading','realestate','clothes','food']},
     {label:'Creative',keys:['entertainment','fitness']},
@@ -4168,11 +4171,12 @@ function fitBusiness(body){
    PLACEHOLDERS
    ════════════════════════════════════════ */
 function renderPlaceholder(name,key){
-  var icons={entertainment:'🎮',supplychain:'🚛',tech:'⚙️',trading:'📈',realestate:'🏠',clothes:'👗',food:'🍽️',fitness:'💪'};
+  var icons={entertainment:'🎮',supplychain:'🚛',valuefleet:'🔩',tech:'⚙️',trading:'📈',realestate:'🏠',clothes:'👗',food:'🍽️',fitness:'💪'};
   var ic=icons[key]||'◎';
   var descs={
     entertainment:'Casino, music, games, movies and reading — all in one place.',
-    supplychain:'Transport, logistics, warehousing and customs brokerage.',
+    supplychain:'Full TMS — loads, dispatch, fleet, drivers, customs and logistics.',
+    valuefleet:'Parts sourcing, expense tracking, and payments for your fleet.',
     tech:'Manage your watch, car and computer from one place.',
     trading:'Stock trading and commodity trading dashboard.',
     realestate:'Browse and manage your properties.',
@@ -4193,8 +4197,8 @@ function renderPlaceholder(name,key){
    ADMIN — User Management
    ════════════════════════════════════════ */
 var ALL_PERSONAL=['memories','translate','health','finances','permits','legal'];
-var ALL_BUSINESS=['software','entertainment','supplychain','tech','trading','realestate','bizfinance','clothes','food','fitness','bizlegal'];
-var MOD_LABELS={memories:'Memories',translate:'Translate',health:'Health',finances:'Finances',permits:'Permits',legal:'Legal',software:'Software',entertainment:'Entertainment',supplychain:'Supply Chain',tech:'Tech',trading:'Trading',realestate:'Real Estate',bizfinance:'Finance',clothes:'Clothes',food:'Food',fitness:'Fitness',bizlegal:'Legal (Biz)'};
+var ALL_BUSINESS=['software','entertainment','supplychain','valuefleet','tech','trading','realestate','bizfinance','clothes','food','fitness','bizlegal'];
+var MOD_LABELS={memories:'Memories',translate:'Translate',health:'Health',finances:'Finances',permits:'Permits',legal:'Legal',software:'Software',entertainment:'Entertainment',supplychain:'Supply Chain',valuefleet:'Value Fleet',tech:'Tech',trading:'Trading',realestate:'Real Estate',bizfinance:'Finance',clothes:'Clothes',food:'Food',fitness:'Fitness',bizlegal:'Legal (Biz)'};
 
 function saveUsers(){localStorage.setItem('TOI_USERS',JSON.stringify(TOI_USERS));}
 
@@ -4232,7 +4236,7 @@ function adminRenderUsers(){
   var admins=TOI_USERS.filter(function(u){return u.role==='admin'||u.role==='superadmin';}).length;
   var clients=TOI_USERS.filter(function(u){return u.role==='client';}).length;
   var allP=['memories','translate','health','finances','permits','legal'];
-  var allB=['software','codestudio','entertainment','supplychain','tech','trading','realestate','bizfinance','clothes','food','fitness','bizlegal'];
+  var allB=['software','codestudio','entertainment','supplychain','valuefleet','tech','trading','realestate','bizfinance','clothes','food','fitness','bizlegal'];
   var userCards=TOI_USERS.map(function(u){
     var roleColor=RC[u.role]||'#c9c0f0';
     var roleLabel=RL[u.role]||u.role;
@@ -4294,6 +4298,7 @@ function adminRenderUsers(){
   '<div class="adm-form-title">New User</div>'+
   '<div class="adm-form-row"><div><label class="adm-label">Full Name</label><input class="adm-input" id="adm-name" placeholder="Name"></div>'+
   '<div><label class="adm-label">Passkey</label><input class="adm-input" id="adm-pw" placeholder="Access key"></div></div>'+
+  '<div style="margin:10px 0"><label class="adm-label">Notification Email <span style="color:var(--text3);font-size:9px">(optional — load status updates sent here)</span></label><input class="adm-input" id="adm-email" type="email" placeholder="client@email.com"></div>'+
   '<div style="margin:12px 0"><label class="adm-label">Role</label>'+
   '<select class="adm-input" id="adm-role" onchange="adminRoleChange()">'+
   '<option value="client">Client / Employee</option>'+
@@ -4407,7 +4412,7 @@ function adminShowAdd(){
 function adminRoleChange(){
   var role=document.getElementById('adm-role').value;
   if(role==='admin'||role==='superadmin'){adminSelectAll();}
-  else{adminClearAll();var c=document.querySelector('.adm-cb-business[value="supplychain"]');if(c)c.checked=true;}
+  else{adminClearAll();var c=document.querySelector('.adm-cb-business[value="valuefleet"]');if(c)c.checked=true;}
 }
 function adminAddUser(){
   var name=(document.getElementById('adm-name')||{}).value;
@@ -4419,8 +4424,9 @@ function adminAddUser(){
   var personal=[].slice.call(document.querySelectorAll('.adm-cb-personal:checked')).map(function(c){return c.value;});
   var business=[].slice.call(document.querySelectorAll('.adm-cb-business:checked')).map(function(c){return c.value;});
   var chat=document.getElementById('adm-chat')&&document.getElementById('adm-chat').checked;
+  var email=((document.getElementById('adm-email')||{}).value||'').trim();
   var allAccess=(role==='admin'||role==='superadmin');
-  var user={id:'u_'+Date.now(),name:name,password:pw,role:role,access:{all:allAccess,chat:chat||allAccess,personal:allAccess?['memories','translate','health','finances','permits','legal']:personal,business:allAccess?['software','codestudio','entertainment','supplychain','tech','trading','realestate','bizfinance','bizoverview','clothes','food','fitness','bizlegal']:business}};
+  var user={id:'u_'+Date.now(),name:name,password:pw,role:role,preferredEmail:email||null,access:{all:allAccess,chat:chat||allAccess,personal:allAccess?['memories','translate','health','finances','permits','legal']:personal,business:allAccess?['software','codestudio','entertainment','supplychain','valuefleet','tech','trading','realestate','bizfinance','bizoverview','clothes','food','fitness','bizlegal']:business}};
   TOI_USERS.push(user);
   saveUsers();
   sfxSuccess();toast('User created · '+name);burstAt(canvas.width/2,canvas.height/2,20,'123,108,255');
@@ -4444,7 +4450,7 @@ function adminEditUser(id){
   var u=TOI_USERS.find(function(x){return x.id===id;});
   if(!u)return;
   var allP=['memories','translate','health','finances','permits','legal'];
-  var allB=['software','codestudio','entertainment','supplychain','tech','trading','realestate','bizfinance','clothes','food','fitness','bizlegal'];
+  var allB=['software','codestudio','entertainment','supplychain','valuefleet','tech','trading','realestate','bizfinance','clothes','food','fitness','bizlegal'];
   var pChecked=u.access.personal||[];var bChecked=u.access.business||[];
   var pBoxes=allP.map(function(k){return'<label class="adm-mod-check"><input type="checkbox" class="edit-cb-p" value="'+k+'"'+(pChecked.indexOf(k)!==-1?' checked':'')+'> '+(MOD_LABELS[k]||k)+'</label>';}).join('');
   var bBoxes=allB.map(function(k){return'<label class="adm-mod-check"><input type="checkbox" class="edit-cb-b" value="'+k+'"'+(bChecked.indexOf(k)!==-1?' checked':'')+'> '+(MOD_LABELS[k]||k)+'</label>';}).join('');
@@ -4462,6 +4468,7 @@ function adminEditUser(id){
   '<div><label class="adm-label">Name</label><input class="adm-input" id="edit-name" value="'+u.name+'"></div>'+
   '<div><label class="adm-label">Passkey</label><input class="adm-input" id="edit-pw" value="'+u.password+'"></div>'+
   '</div>'+
+  '<div style="margin:10px 0"><label class="adm-label">Notification Email <span style="color:var(--text3);font-size:9px">(load status updates sent here)</span></label><input class="adm-input" id="edit-email" type="email" placeholder="client@email.com" value="'+(u.preferredEmail||'')+'"></div>'+
   (isSuper||u.role!=='superadmin'?'<div style="margin:12px 0"><label class="adm-label">Role</label><select class="adm-input" id="edit-role">'+roleOpts+'</select></div>':'')+
   '<div class="adm-section-lbl">Chat</div><div class="adm-modules"><label class="adm-mod-check"><input type="checkbox" id="edit-chat"'+(u.access.chat?' checked':'')+'> Chat module</label></div>'+
   '<div class="adm-section-lbl">Personal</div><div class="adm-modules">'+pBoxes+'</div>'+
@@ -4487,9 +4494,10 @@ function adminSaveEdit(id){
   var chat=document.getElementById('edit-chat')&&document.getElementById('edit-chat').checked;
   var personal=[].slice.call(document.querySelectorAll('.edit-cb-p:checked')).map(function(c){return c.value;});
   var business=[].slice.call(document.querySelectorAll('.edit-cb-b:checked')).map(function(c){return c.value;});
+  var email=((document.getElementById('edit-email')||{}).value||'').trim();
   var allAccess=(role==='admin'||role==='superadmin');
-  u.name=name;u.password=pw;u.role=role;
-  u.access={all:allAccess,chat:chat||allAccess,personal:allAccess?['memories','translate','health','finances','permits','legal']:personal,business:allAccess?['software','codestudio','entertainment','supplychain','tech','trading','realestate','bizfinance','bizoverview','clothes','food','fitness','bizlegal']:business};
+  u.name=name;u.password=pw;u.role=role;u.preferredEmail=email||null;
+  u.access={all:allAccess,chat:chat||allAccess,personal:allAccess?['memories','translate','health','finances','permits','legal']:personal,business:allAccess?['software','codestudio','entertainment','supplychain','valuefleet','tech','trading','realestate','bizfinance','bizoverview','clothes','food','fitness','bizlegal']:business};
   saveUsers();
   sfxSuccess();toast('User updated · '+name);
   renderAdmin();
@@ -4521,6 +4529,26 @@ function renderSupplyChain(){
   '<div id="tms-body" class="tms-body"></div>'+
   '</div>';
   tmsGroup('dashboard');
+}
+
+function renderValueFleet(){
+  sfxWhoosh();
+  var D=window.TMS_DATA;
+  if(!D.partsRequests)D.partsRequests=[];
+  if(!D.clientInvoices)D.clientInvoices=[];
+  var tab=window._vfAdminTab||'partsreqs';
+  var tabs=[['partsreqs','Parts Requests'],['invoices','Invoices']];
+  var tabBar=tabs.map(function(t){
+    var on=tab===t[0];
+    return '<button class="tms-tab'+(on?' active':'')+'" onclick="window._vfAdminTab=\''+t[0]+'\';renderValueFleet()">'+t[1]+'</button>';
+  }).join('');
+  document.getElementById('content').innerHTML=
+    '<div class="tms-wrap">'+
+    '<div class="tms-topbar" id="vf-admintabs">'+tabBar+'</div>'+
+    '<div id="tms-body" class="tms-body"></div>'+
+    '</div>';
+  if(tab==='partsreqs')tmsPartsRequests();
+  else tmsInvoices();
 }
 function tmsGroup(g){
   _tmsActiveGroup=g;
@@ -4596,39 +4624,178 @@ function tmsTab(key){
 }
 function tmsDashboard(){
   var D=window.TMS_DATA;
-  var activeLoads=D.loads.filter(function(l){return l.status!=='Delivered';}).length;
-  var net=D.finances.revenue-D.finances.expenses;
-  var trucksOn=D.equipment.filter(function(e){return e.type==='Truck'&&e.status==='active';}).length;
-  var pendingCust=D.customs.filter(function(c){return c.status==='Pending';}).length;
+  var FM=window.FM_LOADS||[];
   var sc={'In Transit':'purple','Picked Up':'yellow','At Border':'blue','Delivered':'green'};
-  var rows=D.loads.slice().reverse().slice(0,4).map(function(l){
-    var cls=sc[l.status]||'purple';
-    return '<tr class="tms-tr"><td class="tms-td" style="color:var(--text)">'+l.id+'</td>'+
-    '<td class="tms-td">'+l.origin+' → '+l.dest+'</td>'+
-    '<td class="tms-td">'+l.driver+'</td>'+
-    '<td class="tms-td"><span class="tms-badge '+cls+'">'+l.status+'</span></td></tr>';
+
+  /* ── Aggregate FM stats ── */
+  var monthly={},drvS={},custS={},catS={};
+  var totalFMrev=0,cadRev=0,usdRev=0;
+  FM.forEach(function(l){
+    var rev=l.revenue||0; totalFMrev+=rev;
+    /* monthly */
+    var m=l.date&&l.date.match(/(\d+)\/(\d+)\/(\d{4})/);
+    if(m){var yr=m[3],mo=m[1].length<2?'0'+m[1]:m[1],key=yr+'-'+mo;
+      if(!monthly[key])monthly[key]={loads:0,rev:0,lbl:['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo,10)]+' '+yr.slice(2)};
+      monthly[key].loads++;monthly[key].rev+=rev;}
+    /* driver */
+    var drv=l.driver||'—';
+    if(!drvS[drv])drvS[drv]={loads:0,rev:0};
+    drvS[drv].loads++;drvS[drv].rev+=rev;
+    /* customer */
+    var c=l.customer||'—';
+    if(!custS[c])custS[c]={loads:0,rev:0};
+    custS[c].loads++;custS[c].rev+=rev;
+    /* cross-border */
+    var cat=l.dispatcher==='Import'||l.dispatcher==='Import'?'Import':(typeof l.type==='string'&&l.origin&&(l.origin.match(/,\s*[A-Z]{2}[, ]*\d/)||l.dest&&l.dest.match(/,\s*[A-Z]{2}[, ]*\d/))?'Cross-Border':'Domestic');
+    if(!catS[cat])catS[cat]=0;catS[cat]++;
+  });
+
+  var totalAllLoads=D.loads.length;
+  var activeLoads=D.loads.filter(function(l){return !l.past;}).length;
+
+  /* Monthly bars — last 12 months */
+  var mKeys=Object.keys(monthly).sort().slice(-12);
+  var maxRev=Math.max.apply(null,mKeys.map(function(k){return monthly[k].rev;}));
+  var monthBars=mKeys.map(function(k){
+    var pct=maxRev?Math.max(3,Math.round(monthly[k].rev/maxRev*100)):3;
+    var rev=monthly[k].rev;
+    var revStr=rev>=1000?'$'+(rev/1000).toFixed(0)+'k':'$'+rev.toFixed(0);
+    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0">'+
+      '<div style="font-size:8px;color:var(--accent2);white-space:nowrap">'+revStr+'</div>'+
+      '<div style="flex:1;width:100%;min-height:4px;max-width:28px;display:flex;flex-direction:column;justify-content:flex-end">'+
+      '<div style="width:100%;background:linear-gradient(0deg,var(--accent),rgba(123,108,255,0.4));border-radius:3px 3px 0 0;height:'+pct+'%;min-height:4px;transition:height 1.2s cubic-bezier(0.16,1,0.3,1)"></div></div>'+
+      '<div style="font-size:7px;color:var(--text3);white-space:nowrap;transform:rotate(-35deg);transform-origin:top center;margin-top:4px">'+monthly[k].lbl+'</div></div>';
   }).join('');
+
+  /* Top drivers */
+  var topDrvs=Object.keys(drvS).sort(function(a,b){return drvS[b].loads-drvS[a].loads;}).slice(0,5);
+  var drvRows=topDrvs.map(function(n,i){
+    var s=drvS[n],pct=Math.round(s.loads/FM.length*100);
+    var colors=['var(--accent)','var(--accent2)','#ffc83c','#4ec8ff','var(--accent3)'];
+    return '<tr class="tms-tr">'+
+      '<td class="tms-td" style="color:var(--text)">'+(i+1)+'. '+n+'</td>'+
+      '<td class="tms-td">'+s.loads+' loads</td>'+
+      '<td class="tms-td" style="color:var(--accent2)">$'+(s.rev/1000).toFixed(1)+'k</td>'+
+      '<td class="tms-td" style="min-width:80px"><div style="height:4px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+colors[i]+';border-radius:3px;transition:width 1s ease"></div></div></td>'+
+      '</tr>';
+  }).join('');
+
+  /* Top customers */
+  var topCusts=Object.keys(custS).sort(function(a,b){return custS[b].rev-custS[a].rev;}).slice(0,6);
+  var custRows=topCusts.map(function(n){
+    var s=custS[n];
+    return '<tr class="tms-tr">'+
+      '<td class="tms-td" style="color:var(--text);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+n+'</td>'+
+      '<td class="tms-td">'+s.loads+'</td>'+
+      '<td class="tms-td" style="color:var(--accent2)">$'+(s.rev/1000).toFixed(1)+'k</td>'+
+      '</tr>';
+  }).join('');
+
+  /* Recent loads (latest 5) */
+  var recentRows=D.loads.slice().reverse().slice(0,5).map(function(l){
+    var cls=sc[l.status]||'purple';
+    var orig=(l.origin||'').split(',')[0];
+    var dst=(l.dest||'').split(',')[0];
+    return '<tr class="tms-tr">'+
+      '<td class="tms-td" style="color:var(--text);white-space:nowrap">'+l.id+'</td>'+
+      '<td class="tms-td" style="font-size:11px">'+orig+' → '+dst+'</td>'+
+      '<td class="tms-td">'+l.driver+'</td>'+
+      '<td class="tms-td"><span class="tms-badge '+cls+'">'+l.status+'</span></td>'+
+      '<td class="tms-td" style="color:var(--accent2);white-space:nowrap">$'+(l.revenue||0).toLocaleString()+'</td>'+
+      '<td class="tms-td"><button class="tms-btn sm" onclick="tmsViewLoad(\''+l.id+'\')">View</button></td>'+
+      '</tr>';
+  }).join('');
+
   var bdy=document.getElementById('tms-body');
   bdy.innerHTML=
-  '<div class="tms-kpi-grid" id="tms-kpi-row">'+
-  '<div class="tms-kpi"><div class="tms-kpi-lbl">Active Loads</div><div class="tms-kpi-val" id="tkpi-0">0</div><div class="tms-kpi-chg">dispatched</div></div>'+
-  '<div class="tms-kpi"><div class="tms-kpi-lbl">Net Revenue</div><div class="tms-kpi-val" id="tkpi-1">0</div><div class="tms-kpi-chg up">this period</div></div>'+
-  '<div class="tms-kpi"><div class="tms-kpi-lbl">Trucks Online</div><div class="tms-kpi-val" id="tkpi-2">0</div><div class="tms-kpi-chg">active</div></div>'+
-  '<div class="tms-kpi"><div class="tms-kpi-lbl">Pending Customs</div><div class="tms-kpi-val" id="tkpi-3">0</div><div class="tms-kpi-chg" style="color:var(--accent3)">awaiting</div></div>'+
+  /* ── KPI row ── */
+  '<div class="tms-kpi-grid" id="tms-kpi-row" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">'+
+  '<div class="tms-kpi"><div class="tms-kpi-lbl">Total Loads</div><div class="tms-kpi-val" id="tkpi-0">0</div><div class="tms-kpi-chg up">all time</div></div>'+
+  '<div class="tms-kpi"><div class="tms-kpi-lbl">Total Revenue</div><div class="tms-kpi-val" id="tkpi-1">0</div><div class="tms-kpi-chg up">CAD + USD</div></div>'+
+  '<div class="tms-kpi"><div class="tms-kpi-lbl">Active Loads</div><div class="tms-kpi-val" id="tkpi-2">0</div><div class="tms-kpi-chg">in dispatch</div></div>'+
+  '<div class="tms-kpi"><div class="tms-kpi-lbl">Top Driver</div><div class="tms-kpi-val" style="font-size:18px" id="tkpi-3">—</div><div class="tms-kpi-chg up" id="tkpi-3b">loads</div></div>'+
+  '<div class="tms-kpi"><div class="tms-kpi-lbl">Customers</div><div class="tms-kpi-val" id="tkpi-4">0</div><div class="tms-kpi-chg">unique</div></div>'+
+  '<div class="tms-kpi"><div class="tms-kpi-lbl">Avg Revenue</div><div class="tms-kpi-val" id="tkpi-5">0</div><div class="tms-kpi-chg">per load</div></div>'+
   '</div>'+
-  '<div class="tms-section-title">Recent Loads</div>'+
-  '<table class="tms-table" style="max-width:680px"><thead><tr>'+
-  '<th class="tms-th">Load ID</th><th class="tms-th">Route</th><th class="tms-th">Driver</th><th class="tms-th">Status</th>'+
-  '</tr></thead><tbody>'+rows+'</tbody></table>';
+
+  /* ── Two column: chart + driver table ── */
+  '<div class="tms-two-col" style="margin-top:4px">'+
+  '<div>'+
+  '<div class="tms-section-title">Revenue by Month</div>'+
+  '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:18px 14px;display:flex;align-items:flex-end;gap:4px;height:130px;overflow-x:auto">'+
+  (monthBars||'<div style="color:var(--text3);font-size:11px;margin:auto">No data</div>')+
+  '</div>'+
+  '</div>'+
+  '<div>'+
+  '<div class="tms-section-title">Driver Performance</div>'+
+  '<table class="tms-table"><thead><tr>'+
+  '<th class="tms-th">Driver</th><th class="tms-th">Loads</th><th class="tms-th">Revenue</th><th class="tms-th">Share</th>'+
+  '</tr></thead><tbody>'+drvRows+'</tbody></table>'+
+  '</div>'+
+  '</div>'+
+
+  /* ── Two column: customers + categories ── */
+  '<div class="tms-two-col">'+
+  '<div>'+
+  '<div class="tms-section-title">Top Customers</div>'+
+  '<table class="tms-table"><thead><tr>'+
+  '<th class="tms-th">Customer</th><th class="tms-th">Loads</th><th class="tms-th">Revenue</th>'+
+  '</tr></thead><tbody>'+custRows+'</tbody></table>'+
+  '</div>'+
+  '<div>'+
+  '<div class="tms-section-title">Load Breakdown</div>'+
+  '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:16px 18px">'+
+  _fmCategoryBars(FM)+
+  '</div>'+
+  '</div>'+
+  '</div>'+
+
+  /* ── Recent loads ── */
+  '<div class="tms-section-title" style="margin-top:4px">Recent Loads</div>'+
+  '<table class="tms-table" style="max-width:820px"><thead><tr>'+
+  '<th class="tms-th">ID</th><th class="tms-th">Route</th><th class="tms-th">Driver</th><th class="tms-th">Status</th><th class="tms-th">Revenue</th><th class="tms-th"></th>'+
+  '</tr></thead><tbody>'+recentRows+'</tbody></table>';
+
   sfxCoin();
+  var topDrv=topDrvs[0]||'—';
+  var topDrvLoads=topDrv!=='—'?drvS[topDrv].loads:0;
   setTimeout(function(){
-    countUp(document.getElementById('tkpi-0'),activeLoads,'');
-    countUp(document.getElementById('tkpi-1'),net,'$');
-    countUp(document.getElementById('tkpi-2'),trucksOn,'');
-    countUp(document.getElementById('tkpi-3'),pendingCust,'');
+    countUp(document.getElementById('tkpi-0'),totalAllLoads,'');
+    (function(){var el=document.getElementById('tkpi-1');if(!el)return;var t0=Date.now(),dur=900,target=totalFMrev;function f(){var p=Math.min(1,(Date.now()-t0)/dur),v=Math.round((1-Math.pow(1-p,3))*target);el.textContent='$'+(v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'k':v);if(p<1)requestAnimationFrame(f);}f();})();
+    countUp(document.getElementById('tkpi-2'),activeLoads,'');
+    var el3=document.getElementById('tkpi-3');if(el3)el3.textContent=topDrv;
+    var el3b=document.getElementById('tkpi-3b');if(el3b)el3b.textContent=topDrvLoads+' loads';
+    countUp(document.getElementById('tkpi-4'),Object.keys(custS).length,'');
+    countUp(document.getElementById('tkpi-5'),Math.round(totalFMrev/(FM.length||1)),'$');
     var g=document.getElementById('tms-kpi-row');
     if(g){var r=g.getBoundingClientRect();burstAt(r.left+r.width/2,r.top+r.height/2,14,'123,108,255');}
   },100);
+}
+function _fmCategoryBars(FM){
+  if(!FM||!FM.length)return '<div style="color:var(--text3);font-size:11px">No FM data</div>';
+  var cats={'Outbound US':0,'Inbound CA':0,'Inter-City':0,'Inter-Province':0,'Other':0};
+  FM.forEach(function(l){
+    var orig=(l.origin||'').toLowerCase(),dest=(l.dest||'').toLowerCase();
+    var usStates=/(,\s*[A-Z]{2},?\s*\d{5})|( ny,| nj,| ct,| ma,| pa,| il,| tx,| fl,| ga,| nc,| va,| md,| oh,| mi,| in,| wi,| mn,| mo,| tn,| al,| ms,| la,| ar,| ok,| ks,| ne,| ia,| sd,| nd,| wy,| co,| nm,| az,| ut,| nv,| id,| mt,| wa,| or,| ca)/i;
+    var caProvinces=/, (qc|on|bc|ab|sk|mb|ns|nb|pe|nl),/i;
+    if(usStates.test(dest)&&caProvinces.test(orig))cats['Outbound US']++;
+    else if(usStates.test(orig)&&caProvinces.test(dest))cats['Inbound CA']++;
+    else if(caProvinces.test(orig)&&caProvinces.test(dest)){
+      var oP=orig.match(/, (qc|on|bc|ab|sk|mb|ns|nb)/i);
+      var dP=dest.match(/, (qc|on|bc|ab|sk|mb|ns|nb)/i);
+      if(oP&&dP&&oP[1].toLowerCase()!==dP[1].toLowerCase())cats['Inter-Province']++;
+      else cats['Inter-City']++;
+    }else cats['Other']++;
+  });
+  var total=FM.length||1;
+  var clrs={'Outbound US':'var(--accent)','Inbound CA':'var(--accent2)','Inter-City':'#ffc83c','Inter-Province':'#4ec8ff','Other':'var(--text3)'};
+  return Object.keys(cats).map(function(k){
+    var n=cats[k],pct=Math.round(n/total*100);
+    return '<div class="tms-bar-wrap">'+
+      '<div class="tms-bar-top"><span>'+k+'</span><span>'+n+' ('+pct+'%)</span></div>'+
+      '<div class="tms-bar-bg"><div class="tms-bar-fill" style="width:'+pct+'%;background:'+clrs[k]+';transition:width 1.2s ease"></div></div>'+
+      '</div>';
+  }).join('');
 }
 var _tmsShowHistory=false;
 function tmsTransport(){
@@ -4678,9 +4845,10 @@ function tmsTransport(){
   '<div><label class="tms-label">Special Instructions</label><input class="tms-input" id="tl-notes" placeholder="Hazmat, temp req, etc."></div>'+
   '<div id="tl-carrier-rec" style="display:none"></div>'+
   '</div>'+
-  '<div style="display:flex;gap:10px;margin-top:10px">'+
+  '<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">'+
   '<button class="tms-btn primary" onclick="tmsAddLoad()">Create Load</button>'+
   '<button class="tms-btn" onclick="tmsAddLoad(true)">Create + Post to Board</button>'+
+  '<button class="tms-btn" onclick="tmsTenderImport()" style="border-color:rgba(78,240,196,0.35);color:var(--accent2)">📄 Import Tender PDF</button>'+
   '</div>'+
   '</div>'+
   '<div>'+
@@ -4715,6 +4883,127 @@ function tmsAutoRoute(){
   if(rec){var best=tmsGetBestCarrier(ltype,orig,dest);if(best){rec.style.display='';rec.innerHTML='<div style="margin-top:8px;background:rgba(123,108,255,0.08);border:0.5px solid rgba(123,108,255,0.2);border-radius:8px;padding:10px;font-size:11px"><span style="color:var(--accent)">🏆 Recommended Carrier</span><br>'+best.name+' · Safety: <strong style="color:var(--accent2)">'+best.score+'/100</strong> · '+best.equipment+'<br><span style="color:var(--text3)">'+best.reason+'</span></div>';}}
 }
 function tmsLoadTypeChange(){tmsAutoRoute();}
+function tmsTenderImport(){
+  var existing=document.getElementById('tender-import-overlay');
+  if(existing)existing.remove();
+  var ov=document.createElement('div');
+  ov.id='tender-import-overlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(6,6,15,0.85);backdrop-filter:blur(8px);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML=
+    '<div style="background:#0e0e1c;border:0.5px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:480px;box-shadow:0 24px 60px rgba(0,0,0,0.6)">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+    '<div style="font-size:15px;color:var(--text);font-weight:300">Import Load Tender</div>'+
+    '<button onclick="document.getElementById(\'tender-import-overlay\').remove()" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0 4px">×</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:22px">Upload a carrier PDF tender — we\'ll read it and pre-fill the load for you.</div>'+
+    '<label id="tender-dropzone" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border:1px dashed rgba(78,240,196,0.3);border-radius:12px;padding:32px 20px;cursor:pointer;transition:border-color 0.2s;background:rgba(78,240,196,0.03)">'+
+    '<div style="font-size:26px">📄</div>'+
+    '<div style="font-size:12px;color:var(--text2)">Click to upload PDF</div>'+
+    '<div style="font-size:10px;color:var(--text3)">Carrier load tenders, rate confirmations</div>'+
+    '<input type="file" id="tender-file-in" accept=".pdf" style="display:none" onchange="tmsTenderProcess(this)">'+
+    '</label>'+
+    '<div id="tender-result" style="margin-top:18px"></div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  document.getElementById('tender-dropzone').addEventListener('click',function(){document.getElementById('tender-file-in').click();});
+}
+
+async function tmsTenderProcess(input){
+  var file=input.files&&input.files[0];
+  if(!file)return;
+  var res=document.getElementById('tender-result');
+  res.innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:11px;color:var(--accent2);letter-spacing:0.1em">READING TENDER…</div><div style="font-size:10px;color:var(--text3);margin-top:6px">AI is extracting load details</div></div>';
+  var KEY=window.ANTHROPIC_KEY||window.KEY||'';
+  if(!KEY){res.innerHTML='<div style="font-size:11px;color:rgba(255,80,80,0.8)">No API key found. Go to Settings → API Key.</div>';return;}
+  try{
+    var b64=await new Promise(function(resolve,reject){
+      var r=new FileReader();
+      r.onload=function(e){resolve(e.target.result.split(',')[1]);};
+      r.onerror=reject;
+      r.readAsDataURL(file);
+    });
+    var resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:600,
+        messages:[{role:'user',content:[
+          {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+          {type:'text',text:'Extract load details from this carrier tender PDF. Return ONLY valid JSON, no explanation:\n{"loadNumber":"","customer":"","carrier":"","origin":"","destination":"","revenue":0,"weight":"","pallets":0,"ref":"","tenderDate":"","notes":"","loadType":""}'}
+        ]}]
+      })
+    });
+    var data=await resp.json();
+    var raw=(data.content&&data.content[0]&&data.content[0].text)||'{}';
+    var jsonStr=raw.match(/\{[\s\S]*\}/);
+    var ld=JSON.parse(jsonStr?jsonStr[0]:'{}');
+    window._tenderParsed=ld;
+    var fields=[
+      ['Customer',ld.customer||'—'],
+      ['Load #',ld.loadNumber||'—'],
+      ['Origin',ld.origin||'—'],
+      ['Destination',ld.destination||'—'],
+      ['Revenue','$'+(parseFloat(ld.revenue)||0).toFixed(2)],
+      ['Weight',ld.weight||'—'],
+      ['Pallets',ld.pallets||'—'],
+      ['Carrier',ld.carrier||'—'],
+      ['Tender Date',ld.tenderDate||'—'],
+    ];
+    var rows=fields.map(function(f){
+      return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid var(--border)">'+
+        '<div style="font-size:10px;color:var(--text3)">'+f[0]+'</div>'+
+        '<div style="font-size:11px;color:var(--text);text-align:right;max-width:60%">'+f[1]+'</div></div>';
+    }).join('');
+    res.innerHTML=
+      '<div style="font-size:9px;color:var(--accent2);letter-spacing:0.1em;margin-bottom:10px">EXTRACTED FROM TENDER</div>'+
+      '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:4px 12px;margin-bottom:16px">'+rows+'</div>'+
+      (ld.notes?'<div style="font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.6">'+ld.notes+'</div>':'')+
+      '<div style="display:flex;gap:8px">'+
+      '<button class="tms-btn primary" style="flex:1" onclick="tmsTenderConfirm()">✓ Add to Loads</button>'+
+      '<button class="tms-btn" onclick="document.getElementById(\'tender-import-overlay\').remove()">Cancel</button>'+
+      '</div>';
+    sfxSuccess();
+  }catch(e){res.innerHTML='<div style="font-size:11px;color:rgba(255,80,80,0.8)">Could not read tender: '+e.message+'</div>';}
+}
+
+function tmsTenderConfirm(){
+  var ld=window._tenderParsed||{};
+  var D=window.TMS_DATA;
+  var id='LD-'+(ld.loadNumber||Date.now());
+  var exists=D.loads.find(function(l){return l.id===id||l.ref===ld.loadNumber;});
+  if(exists){sfxError();toast('Load '+id+' already exists in history');return;}
+  D.loads.push({
+    id:id,
+    ref:ld.loadNumber||id,
+    origin:ld.origin||'—',
+    dest:ld.destination||'—',
+    driver:ld.carrier||'—',
+    truck:'—',
+    status:'Delivered',
+    customer:ld.customer||'—',
+    created:ld.tenderDate||new Date().toLocaleDateString(),
+    revenue:parseFloat(ld.revenue)||0,
+    weight:ld.weight||'—',
+    pallets:ld.pallets||0,
+    commodity:'General Freight',
+    loadType:ld.loadType||'Truckload',
+    trailerType:"Dry Van",
+    notes:ld.notes||'',
+    posted:false,
+    past:true,
+    bookedBy:'Tender Import',
+    tenderImported:true,
+    source:'tender'
+  });
+  if(typeof _fbPushTMS==='function')_fbPushTMS();
+  document.getElementById('tender-import-overlay').remove();
+  window._tenderParsed=null;
+  _tmsShowHistory=true;
+  tmsTransport();
+  sfxSuccess();toast('Load added from tender · '+id);
+}
+
 function tmsAddLoad(postToBoard){
   var orig=(document.getElementById('tl-orig').value||'').trim();
   var dest=(document.getElementById('tl-dest').value||'').trim();
@@ -4952,45 +5241,237 @@ function tmsLogistics(){
   '</tr></thead><tbody>'+(loadRows||'<tr><td class="tms-td" colspan="4" style="color:var(--text3)">No active loads.</td></tr>')+'</tbody></table>';
 }
 function tmsCustoms(){
-  var D=window.TMS_DATA;
-  var loadOpts=D.loads.map(function(l){return '<option value="'+l.id+'">'+l.id+' — '+l.ref+'</option>';}).join('');
-  var declRows=D.customs.map(function(c){
-    var sc=c.status==='Approved'?'green':'yellow';
-    var tc=c.type==='ACI'?'blue':'purple';
-    return '<tr class="tms-tr">'+
-    '<td class="tms-td" style="font-size:10px;color:var(--text3)">'+c.id+'</td>'+
-    '<td class="tms-td"><span class="tms-badge '+tc+'">'+c.type+'</span></td>'+
-    '<td class="tms-td">'+c.load+'</td>'+
-    '<td class="tms-td"><span class="tms-badge '+sc+'">'+c.status+'</span></td>'+
-    '<td class="tms-td" style="font-size:10px">'+c.submitted+'</td>'+
-    '<td class="tms-td">'+c.broker+'</td></tr>';
+  var tab=window._bcTab||'manifest';
+  var key=localStorage.getItem('API_KEY_BORDERCONNECT')||'';
+  var tabs=[['manifest','📋 Create Manifest'],['status','🔍 Check Clearance'],['history','📜 History']];
+  var tabBar=tabs.map(function(t){
+    var on=t[0]===tab;
+    return '<button class="tms-tab'+(on?' active':'')+'" onclick="window._bcTab=\''+t[0]+'\';tmsCustoms()">'+t[1]+'</button>';
   }).join('');
+  var keyBanner=key
+    ?'<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;padding:9px 14px;background:rgba(78,240,196,0.06);border:0.5px solid rgba(78,240,196,0.2);border-radius:8px"><div style="width:6px;height:6px;border-radius:50%;background:#4ef0c4;flex-shrink:0"></div><span style="font-size:11px;color:var(--text2)">BorderConnect connected · key …'+key.slice(-6)+'</span></div>'
+    :'<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;padding:9px 14px;background:rgba(255,107,107,0.06);border:0.5px solid rgba(255,107,107,0.2);border-radius:8px"><div style="width:6px;height:6px;border-radius:50%;background:#ff6b6b;flex-shrink:0"></div><span style="font-size:11px;color:#ff6b6b">No API key — Admin → Integrations → BorderConnect</span></div>';
+  var content='';
+  if(tab==='manifest')content=_bcManifestForm();
+  else if(tab==='status')content=_bcStatusForm();
+  else content=_bcHistoryTable();
   document.getElementById('tms-body').innerHTML=
-  '<div class="tms-section-title">Customs Declaration <span class="tms-sim-badge">BORDERCONNECT — SIMULATED</span></div>'+
-  '<div class="tms-sub-note">ACI — Pre-arrival Canada (import). ACE — Pre-arrival USA (export/entry to US). File minimum 1 hr before arrival.</div>'+
-  '<div class="tms-form-grid">'+
-  '<div><label class="tms-label">Load</label><select class="tms-select" id="tc-load">'+loadOpts+'</select></div>'+
-  '<div><label class="tms-label">Declaration Type</label><select class="tms-select" id="tc-type"><option value="ACI">ACI — Canada Import</option><option value="ACE">ACE — US Pre-arrival</option></select></div>'+
-  '<div><label class="tms-label">Commodity</label><input class="tms-input" id="tc-com" placeholder="e.g. Auto Parts"></div>'+
-  '<div><label class="tms-label">Declared Value (CAD)</label><input class="tms-input" id="tc-val" type="number" placeholder="15000"></div>'+
-  '</div>'+
-  '<button class="tms-btn primary" style="margin-bottom:24px" onclick="tmsSubmitCustoms()">Submit Declaration</button>'+
-  '<div class="tms-section-title">Declaration Log</div>'+
-  '<div style="overflow-x:auto"><table class="tms-table"><thead><tr>'+
-  '<th class="tms-th">Declaration ID</th><th class="tms-th">Type</th><th class="tms-th">Load</th><th class="tms-th">Status</th><th class="tms-th">Submitted</th><th class="tms-th">Broker</th>'+
-  '</tr></thead><tbody>'+declRows+'</tbody></table></div>';
+    '<div style="max-width:760px">'+
+    '<div class="tms-section-title" style="margin-bottom:14px">🛃 BorderConnect eManifest</div>'+
+    keyBanner+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px">'+tabBar+'</div>'+
+    content+
+    '</div>';
 }
-function tmsSubmitCustoms(){
-  var load=document.getElementById('tc-load').value;
-  var type=document.getElementById('tc-type').value;
-  var com=(document.getElementById('tc-com').value||'').trim();
-  var val=(document.getElementById('tc-val').value||'').trim();
-  if(!com||!val){sfxError();toast('Fill all fields');return;}
+function _bcManifestForm(){
+  var D=window.TMS_DATA;
+  var loadOpts=D.loads.length?D.loads.map(function(l){return '<option value="'+l.id+'">'+l.id+(l.ref?' — '+l.ref:'')+(l.driver?' ('+l.driver+')':'')+'</option>';}).join(''):'<option value="">— No loads —</option>';
+  var drvOpts=D.drivers.length?D.drivers.map(function(d){return '<option value="'+d.id+'">'+d.name+(d.lic?' · '+d.lic:'')+'</option>';}).join(''):'<option value="">— No drivers —</option>';
+  var trucks=D.equipment.filter(function(e){return e.type==='Truck';});
+  var truckOpts=trucks.length?trucks.map(function(e){return '<option value="'+e.id+'">#'+e.truckNum+' '+e.make+' '+e.year+' — '+e.plate+'</option>';}).join(''):'<option value="">— No trucks —</option>';
+  var trailers=D.equipment.filter(function(e){return e.type==='Trailer';});
+  var trailerOpts='<option value="">— None —</option>'+(trailers.map(function(e){return '<option value="'+e.id+'">Trailer #'+e.truckNum+' — '+e.plate+'</option>';}).join(''));
+  var acePorts='<option value="0901">Ambassador Bridge — Windsor/Detroit</option><option value="0957">Blue Water Bridge — Sarnia/Port Huron</option><option value="0712">Peace Bridge — Fort Erie/Buffalo</option><option value="0801">Rainbow Bridge — Niagara Falls</option><option value="0101">Champlain — Lacolle/Champlain NY</option><option value="0304">Thousand Islands Bridge</option>';
+  var now=new Date(Date.now()+3600000);
+  var dtStr=now.toISOString().slice(0,16);
+  return '<div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">'+
+    '<div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:16px">Manifest Details</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">'+
+    '<div><label class="tms-label">Load Reference</label><select class="tms-select" id="bc-load">'+loadOpts+'</select></div>'+
+    '<div><label class="tms-label">Manifest Type</label><select class="tms-select" id="bc-type" onchange="_bcTogglePorts()">'+
+      '<option value="ACE">ACE — US Pre-arrival (entering USA)</option>'+
+      '<option value="ACI">ACI — Canada Pre-arrival (entering Canada)</option>'+
+    '</select></div>'+
+    '<div><label class="tms-label">Driver</label><select class="tms-select" id="bc-driver">'+drvOpts+'</select></div>'+
+    '<div><label class="tms-label">Truck</label><select class="tms-select" id="bc-truck">'+truckOpts+'</select></div>'+
+    '<div><label class="tms-label">Trailer (optional)</label><select class="tms-select" id="bc-trailer">'+trailerOpts+'</select></div>'+
+    '<div><label class="tms-label">Port of Entry</label><select class="tms-select" id="bc-port">'+acePorts+'</select></div>'+
+    '<div><label class="tms-label">Estimated Arrival</label><input class="tms-input" id="bc-eta" type="datetime-local" value="'+dtStr+'"></div>'+
+    '<div><label class="tms-label">Commodity</label><input class="tms-input" id="bc-commodity" placeholder="e.g. Auto Parts, General Merchandise"></div>'+
+    '</div>'+
+    '<button class="tms-btn primary" id="bc-submit-btn" onclick="bcSubmitManifest()">Submit to BorderConnect</button>'+
+    '</div>'+
+    '<div style="font-size:10px;color:var(--text3);line-height:1.7;padding:10px 14px;background:var(--surface);border:0.5px solid var(--border);border-radius:8px">'+
+    '<strong style="color:var(--text2)">ACE</strong> — Entering USA · file min 1 hr before arrival. &nbsp;'+
+    '<strong style="color:var(--text2)">ACI</strong> — Entering Canada · file min 1 hr before arrival.'+
+    '</div>';
+}
+function _bcTogglePorts(){
+  var type=(document.getElementById('bc-type')||{}).value;
+  var portSel=document.getElementById('bc-port');
+  if(!portSel)return;
+  if(type==='ACE'){
+    portSel.innerHTML='<option value="0901">Ambassador Bridge — Windsor/Detroit</option><option value="0957">Blue Water Bridge — Sarnia/Port Huron</option><option value="0712">Peace Bridge — Fort Erie/Buffalo</option><option value="0801">Rainbow Bridge — Niagara Falls</option><option value="0101">Champlain — Lacolle/Champlain NY</option><option value="0304">Thousand Islands Bridge</option>';
+  }else{
+    portSel.innerHTML='<option value="480">Windsor (Blue Water), ON</option><option value="481">Sarnia, ON</option><option value="484">Fort Erie, ON</option><option value="485">Queenston-Lewiston, ON</option><option value="402">Lacolle, QC</option><option value="409">St-Bernard-de-Lacolle, QC</option>';
+  }
+}
+function _bcStatusForm(){
+  return '<div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">'+
+    '<div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:16px">Check Clearance Status</div>'+
+    '<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">'+
+    '<div style="flex:1;min-width:220px"><label class="tms-label">Trip / Manifest Number</label>'+
+    '<input class="tms-input" id="bc-tripnum" placeholder="Enter trip number…" style="margin-top:4px"></div>'+
+    '<select class="tms-select" id="bc-status-type" style="width:100px"><option value="ACE">ACE</option><option value="ACI">ACI</option></select>'+
+    '<button class="tms-btn primary" onclick="bcCheckClearance()">Check Status</button>'+
+    '</div>'+
+    '<div id="bc-status-result"></div>'+
+    '</div>'+
+    '<div style="font-size:10px;color:var(--text3);line-height:1.8;padding:10px 14px;background:var(--surface);border:0.5px solid var(--border);border-radius:8px">'+
+    '<span style="color:var(--accent2)">1P</span> Pre-Cleared &nbsp;·&nbsp; '+
+    '<span style="color:var(--accent2)">1A</span> Proceed to Port &nbsp;·&nbsp; '+
+    '<span style="color:#ffc83c">2</span> Secondary Inspection &nbsp;·&nbsp; '+
+    '<span style="color:#ff6b6b">3</span> Do Not Load / Exam &nbsp;·&nbsp; '+
+    '<span style="color:var(--text3)">4</span> Cancelled'+
+    '</div>';
+}
+function _bcHistoryTable(){
+  var manifests=bcGetManifests();
+  if(!manifests.length)return '<div style="font-size:12px;color:var(--text3);text-align:center;padding:30px 0">No manifests yet — create one in the Manifest tab.</div>';
+  var rows=manifests.map(function(m){
+    var sc=m.status==='Cleared'||m.status==='1A'||m.status==='1P'?'green':m.status==='Error'?'red':m.status==='Submitted'?'blue':'yellow';
+    return '<tr class="tms-tr">'+
+    '<td class="tms-td" style="font-size:9px;color:var(--text3);font-family:monospace;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.id+'</td>'+
+    '<td class="tms-td"><span class="tms-badge '+(m.type==='ACE'?'purple':'blue')+'">'+m.type+'</span></td>'+
+    '<td class="tms-td" style="font-size:11px">'+m.load+'</td>'+
+    '<td class="tms-td" style="font-size:11px">'+m.driver+'</td>'+
+    '<td class="tms-td" style="font-size:10px;color:var(--text3)">'+m.port+'</td>'+
+    '<td class="tms-td"><span class="tms-badge '+sc+'">'+m.status+'</span></td>'+
+    '<td class="tms-td" style="font-size:10px;color:var(--text3)">'+m.submitted+'</td>'+
+    '<td class="tms-td" style="white-space:nowrap">'+
+    '<button class="tms-btn sm" onclick="bcViewManifest(\''+m.id+'\')">View</button> '+
+    '<button class="tms-btn sm" onclick="bcRefreshStatus(\''+m.id+'\',\''+m.type+'\')">↻</button>'+
+    '</td></tr>';
+  }).join('');
+  return '<div style="overflow-x:auto"><table class="tms-table"><thead><tr>'+
+    '<th class="tms-th">Trip #</th><th class="tms-th">Type</th><th class="tms-th">Load</th>'+
+    '<th class="tms-th">Driver</th><th class="tms-th">Port</th><th class="tms-th">Status</th>'+
+    '<th class="tms-th">Submitted</th><th class="tms-th"></th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+function bcGetManifests(){try{return JSON.parse(localStorage.getItem('BC_MANIFESTS')||'[]');}catch(e){return[];}}
+function bcSaveManifests(a){localStorage.setItem('BC_MANIFESTS',JSON.stringify(a));}
+async function _bcFetch(method,path,body){
+  var key=localStorage.getItem('API_KEY_BORDERCONNECT')||'';
+  if(!key)return{ok:false,error:'No API key — set in Admin → Integrations'};
+  var opts={method:method,headers:{'Content-Type':'application/json','X-API-Key':key}};
+  if(body)opts.body=JSON.stringify(body);
+  try{
+    var r=await fetch('https://www.borderconnect.com/api/'+path,opts);
+    var txt=await r.text();
+    var json;try{json=JSON.parse(txt);}catch(e){json={raw:txt};}
+    return{ok:r.ok,status:r.status,data:json};
+  }catch(err){
+    var msg=err.message||'Network error';
+    if(msg.toLowerCase().indexOf('cors')!==-1||msg.toLowerCase().indexOf('failed to fetch')!==-1)
+      msg='CORS blocked — BorderConnect does not allow direct browser calls. Manifest saved locally. Use the View button to copy JSON and submit via the BorderConnect portal.';
+    return{ok:false,error:msg};
+  }
+}
+async function bcSubmitManifest(){
+  var D=window.TMS_DATA;
+  var loadId=(document.getElementById('bc-load')||{}).value||'';
+  var type=(document.getElementById('bc-type')||{}).value||'ACE';
+  var drvId=(document.getElementById('bc-driver')||{}).value||'';
+  var truckId=(document.getElementById('bc-truck')||{}).value||'';
+  var trailerId=(document.getElementById('bc-trailer')||{}).value||'';
+  var port=(document.getElementById('bc-port')||{}).value||'';
+  var eta=(document.getElementById('bc-eta')||{}).value||'';
+  var commodity=((document.getElementById('bc-commodity')||{}).value||'').trim();
+  if(!commodity){sfxError();toast('Enter a commodity description');return;}
+  var load=D.loads.find(function(l){return l.id===loadId;})||{};
+  var drv=D.drivers.find(function(d){return d.id===drvId;})||{};
+  var truck=D.equipment.find(function(e){return e.id===truckId;})||{};
+  var trailer=trailerId?D.equipment.find(function(e){return e.id===trailerId;}):null;
+  var tripNum='MOSA-'+type+'-'+Date.now();
+  var etaDt=eta?new Date(eta).toISOString():'';
+  var nameParts=(drv.name||'Driver').split(' ');
+  var payload={
+    tripNumber:tripNum,
+    actionCode:'A',
+    portOfEntry:port,
+    estimatedArrivalDatetime:etaDt,
+    carrier:{name:'Mosa Transport',scac:'MOSA'},
+    driver:{firstName:nameParts[0]||'',lastName:nameParts.slice(1).join(' ')||nameParts[0]||'',licenseNumber:drv.lic||'',licenseState:'ON'},
+    truck:{vin:truck.vin||'',licensePlate:truck.plate||'',licensePlateState:'ON',year:truck.year||'',make:truck.make||''},
+    trailer:trailer?[{number:trailer.id,licensePlate:trailer.plate||'',licensePlateState:'ON'}]:[],
+    shipment:[{shipmentControlNumber:load.ref||load.id||tripNum,description:commodity,origin:load.origin||'',destination:load.dest||'',declaredValue:load.revenue||0}]
+  };
+  var btn=document.getElementById('bc-submit-btn');
+  if(btn){btn.disabled=true;btn.textContent='Submitting…';}
+  var result=await _bcFetch('POST',(type==='ACE'?'ACEhighway':'ACIhighway')+'/trip',payload);
+  if(btn){btn.disabled=false;btn.textContent='Submit to BorderConnect';}
+  var status=result.ok?'Submitted':'Error';
+  var errorMsg=result.ok?'':(result.error||('HTTP '+result.status));
+  if(!result.ok&&errorMsg.indexOf('CORS')!==-1)status='Local Only';
   var now=new Date();
-  var ts=now.toLocaleDateString()+' '+now.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
-  var id=type+'-'+now.getFullYear()+('0'+(now.getMonth()+1)).slice(-2)+('0'+now.getDate()).slice(-2)+now.getHours()+now.getMinutes();
-  window.TMS_DATA.customs.push({id:id,type:type,load:load,status:'Pending',submitted:ts,broker:'TOI Customs'});
-  sfxSuccess();toast('Declaration submitted — pending review');tmsCustoms();
+  var manifests=bcGetManifests();
+  manifests.unshift({id:tripNum,type:type,load:loadId,driver:drv.name||drvId,port:port,eta:eta,commodity:commodity,status:status,error:errorMsg,submitted:now.toLocaleDateString()+' '+now.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}),payload:payload,response:result.data||null});
+  bcSaveManifests(manifests);
+  if(result.ok){sfxSuccess();toast('Manifest submitted to BorderConnect ✓');}
+  else{sfxError();toast(errorMsg.length>60?errorMsg.slice(0,60)+'…':errorMsg);}
+  window._bcTab='history';tmsCustoms();
+}
+async function bcCheckClearance(){
+  var tripNum=((document.getElementById('bc-tripnum')||{}).value||'').trim();
+  var type=(document.getElementById('bc-status-type')||{}).value||'ACE';
+  var res=document.getElementById('bc-status-result');
+  if(!tripNum){sfxError();toast('Enter a trip number');return;}
+  if(res)res.innerHTML='<div style="font-size:11px;color:var(--text3);padding:10px 0">Checking…</div>';
+  var result=await _bcFetch('GET',(type==='ACE'?'ACEhighway':'ACIhighway')+'/trip/'+encodeURIComponent(tripNum)+'/status');
+  if(!res)return;
+  if(result.ok&&result.data){
+    var d=result.data;
+    var code=d.responseCode||d.clearanceCode||d.status||'—';
+    var codeCls=(code==='1P'||code==='1A'||code==='Cleared')?'green':code==='2'?'yellow':'red';
+    res.innerHTML='<div style="padding:14px;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;margin-top:12px">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+      '<span class="tms-badge '+codeCls+'" style="font-size:13px;padding:6px 16px">'+code+'</span>'+
+      '<span style="font-size:12px;color:var(--text2)">'+(d.message||d.statusMessage||d.description||'Response received')+'</span>'+
+      '</div>'+
+      '<pre style="font-size:10px;color:var(--text3);white-space:pre-wrap;word-break:break-all;max-height:180px;overflow-y:auto;background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:10px">'+JSON.stringify(d,null,2)+'</pre>'+
+      '</div>';
+  }else{
+    var errMsg=result.error||('HTTP '+result.status);
+    res.innerHTML='<div style="padding:10px 14px;background:rgba(255,107,107,0.06);border:0.5px solid rgba(255,107,107,0.2);border-radius:8px;margin-top:10px;font-size:11px;color:#ff6b6b">'+errMsg+'</div>';
+  }
+}
+function bcViewManifest(id){
+  var m=bcGetManifests().find(function(x){return x.id===id;});
+  if(!m)return;
+  var payloadStr=JSON.stringify(m.payload,null,2);
+  var el=document.createElement('div');
+  el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  el.innerHTML='<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:14px;padding:24px;max-width:620px;width:100%;max-height:82vh;overflow-y:auto">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
+    '<span style="font-size:12px;color:var(--text);font-family:monospace">'+id+'</span>'+
+    '<button class="tms-btn sm" onclick="this.closest(\'div[style*=\\\"position:fixed\\\"]\').remove()">✕</button>'+
+    '</div>'+
+    (m.error?'<div style="padding:8px 12px;margin-bottom:12px;background:rgba(255,107,107,0.08);border:0.5px solid rgba(255,107,107,0.2);border-radius:6px;font-size:11px;color:#ff6b6b">'+m.error+'</div>':'')+
+    '<div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Payload</div>'+
+    '<pre id="bc-payload-pre" style="font-size:10px;color:var(--text2);white-space:pre-wrap;word-break:break-all;background:var(--surface2);border:0.5px solid var(--border);border-radius:8px;padding:12px;max-height:260px;overflow-y:auto">'+payloadStr+'</pre>'+
+    (m.response?'<div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin:12px 0 6px">API Response</div>'+
+    '<pre style="font-size:10px;color:var(--text2);white-space:pre-wrap;word-break:break-all;background:var(--surface2);border:0.5px solid var(--border);border-radius:8px;padding:12px;max-height:180px;overflow-y:auto">'+JSON.stringify(m.response,null,2)+'</pre>':'')+
+    '<button class="tms-btn" style="margin-top:14px" onclick="navigator.clipboard.writeText(document.getElementById(\'bc-payload-pre\').textContent).then(function(){toast(\'Copied ✓\');})">Copy JSON</button>'+
+    '</div>';
+  document.body.appendChild(el);
+  el.addEventListener('click',function(e){if(e.target===el)el.remove();});
+}
+async function bcRefreshStatus(id,type){
+  var manifests=bcGetManifests();
+  var m=manifests.find(function(x){return x.id===id;});
+  if(!m)return;
+  toast('Checking…');
+  var result=await _bcFetch('GET',(type==='ACE'?'ACEhighway':'ACIhighway')+'/trip/'+encodeURIComponent(id)+'/status');
+  if(result.ok&&result.data){
+    var code=result.data.responseCode||result.data.clearanceCode||result.data.status||'';
+    m.status=(code==='1P'||code==='1A'||code==='Cleared')?'Cleared':code||'Active';
+    m.response=result.data;
+    bcSaveManifests(manifests);
+    sfxSuccess();toast('Status updated ✓');tmsCustoms();
+  }else{
+    sfxError();toast(result.error||'Status check failed');
+  }
 }
 function tmsEquipment(){
   var D=window.TMS_DATA;
@@ -5600,7 +6081,40 @@ function tmsPortalUpdateStatus(loadId,status){
   }
   _fbPushTMS();
   sfxSuccess();
-  toast('Status: '+status+' · '+load.ref+' — client notified');
+  /* Email notification — check user preferredEmail or D.customers billing email */
+  (function(){
+    var toEmail='';
+    var toName=load.customer||'Client';
+    if(load.customer&&load.customer!=='—'){
+      var uMatch=(window.TOI_USERS||[]).find(function(u){return u.name===load.customer;});
+      if(uMatch&&uMatch.preferredEmail)toEmail=uMatch.preferredEmail;
+      if(!toEmail){
+        var custObj=(window.TMS_DATA.customers||[]).find(function(c){return c.name===load.customer||c.company===load.customer;});
+        if(custObj&&custObj.email)toEmail=custObj.email;
+      }
+    }
+    if(!toEmail){toast('Status: '+status+' · '+load.ref);return;}
+    var statusEmojis={'Picked Up':'📦','In Transit':'🚛','At Border':'🛃','Delivered':'✅'};
+    var ico=statusEmojis[status]||'📋';
+    var subj='Load Update '+ico+' — '+load.id+' | '+status;
+    var msg='Dear '+toName+',\n\nYour shipment status has been updated by your driver:\n\n'+
+      'Load ID: '+load.id+'\nReference: '+(load.ref||'—')+'\n'+
+      'Route: '+load.origin+' → '+load.dest+'\n'+
+      'New Status: '+status+'\nUpdated: '+new Date().toLocaleString()+'\n\n'+
+      (status==='Delivered'?'Your shipment has been successfully delivered. Please confirm receipt.\n\n':'')+
+      'toi.ai — Supply Chain\n';
+    var mailto='mailto:'+encodeURIComponent(toEmail)+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(msg);
+    var banner=document.createElement('div');
+    banner.style.cssText='position:fixed;bottom:70px;right:16px;background:var(--surface2);border:0.5px solid rgba(78,240,196,0.35);border-radius:12px;padding:12px 16px;font-size:12px;color:var(--text2);z-index:9999;max-width:300px;box-shadow:0 8px 24px rgba(0,0,0,0.4)';
+    banner.innerHTML='<div style="color:var(--accent2);font-weight:500;margin-bottom:6px">✉ Notify Client?</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">'+toName+' · '+toEmail+'</div>'+
+      '<div style="display:flex;gap:8px">'+
+      '<button onclick="window.open(\''+mailto+'\',\'_blank\');this.closest(\'[style*=fixed]\').remove()" class="tms-btn sm primary">Send Email</button>'+
+      '<button onclick="this.closest(\'[style*=fixed]\').remove()" class="tms-btn sm">Skip</button></div>';
+    document.body.appendChild(banner);
+    setTimeout(function(){if(banner.parentNode)banner.remove();},15000);
+  })();
+  toast('Status: '+status+' · '+load.ref);
   var bdy=document.getElementById('tms-body');
   if(bdy){var r=bdy.getBoundingClientRect();burstAt(r.left+r.width/2,r.top+100,10,'78,240,196');}
   tmsDriverPortal();
@@ -5631,89 +6145,263 @@ function tmsDriverSignOut(){
   sfxNav();toast('Signed out');tmsDriverPortal();
 }
 
+/* ── VALUE FLEET ADMIN: PARTS REQUESTS ──────── */
+function tmsPartsRequests(){
+  var D=window.TMS_DATA;
+  if(!D.partsRequests)D.partsRequests=[];
+  var filter=window._vfReqFilter||'all';
+  var statuses=['all','Pending','Ordered','Delivered'];
+  var filterBar=statuses.map(function(s){
+    var on=filter===s;
+    return '<button class="tms-status-btn'+(on?' active':'')+'" onclick="window._vfReqFilter=\''+s+'\';tmsPartsRequests()">'+s+'</button>';
+  }).join('');
+  var rows=(filter==='all'?D.partsRequests:D.partsRequests.filter(function(r){return r.status===filter;}));
+  rows=rows.slice().reverse();
+  var sc={Pending:'yellow',Ordered:'purple',Delivered:'green'};
+  var cards=rows.length?rows.map(function(r,i){
+    var idx=D.partsRequests.indexOf(r);
+    return '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'+
+      '<div style="flex:1">'+
+      '<div style="font-size:10px;color:var(--accent);letter-spacing:0.08em;margin-bottom:4px">'+r.clientName+' · '+r.date+'</div>'+
+      '<div style="font-size:12px;color:var(--text);margin-bottom:6px">'+r.problem+'</div>'+
+      (r.aiSuggestion?'<div style="font-size:10px;color:var(--text3);white-space:pre-wrap;line-height:1.6;background:rgba(78,240,196,0.04);border:0.5px solid rgba(78,240,196,0.12);border-radius:8px;padding:8px 10px;margin-bottom:8px">'+r.aiSuggestion+'</div>':'')+
+      '</div>'+
+      '<span class="tms-badge '+sc[r.status]+'">'+r.status+'</span>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border)">'+
+      '<select class="tms-input" style="width:130px;padding:5px 8px;font-size:10px" onchange="vfUpdateReqStatus('+idx+',this.value)">'+
+      statuses.slice(1).map(function(s){return '<option value="'+s+'"'+(r.status===s?' selected':'')+'>'+s+'</option>';}).join('')+
+      '</select>'+
+      '<input class="tms-input" type="number" min="0" step="0.01" placeholder="Cost $" value="'+(r.cost||'')+'" style="width:100px;padding:5px 8px;font-size:10px" onchange="vfUpdateReqCost('+idx+',this.value)">'+
+      '<button class="tms-btn" style="font-size:10px;padding:5px 12px" onclick="vfSaveReq('+idx+')">Save</button>'+
+      '<button class="tms-btn" style="font-size:10px;padding:5px 12px;background:rgba(255,80,80,0.1);border-color:rgba(255,80,80,0.3);color:#ff8080" onclick="vfDeleteReq('+idx+')">Delete</button>'+
+      '</div>'+
+      '</div>';
+  }).join(''):'<div style="font-size:12px;color:var(--text3);padding:8px 0">No requests.</div>';
+  var bdy=document.getElementById('tms-body');
+  bdy.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px">'+
+    '<div class="tms-section-title" style="margin:0">Parts Requests</div>'+
+    '<div style="display:flex;gap:6px">'+
+    '<div class="tms-kpi" style="padding:8px 14px;min-width:auto"><div class="tms-kpi-lbl">Total</div><div class="tms-kpi-val" style="font-size:18px">'+D.partsRequests.length+'</div></div>'+
+    '<div class="tms-kpi" style="padding:8px 14px;min-width:auto"><div class="tms-kpi-lbl">Pending</div><div class="tms-kpi-val" style="font-size:18px;color:var(--yellow,#f0c040)">'+D.partsRequests.filter(function(r){return r.status==='Pending';}).length+'</div></div>'+
+    '</div></div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">'+filterBar+'</div>'+
+    cards;
+}
+function vfUpdateReqStatus(i,v){var D=window.TMS_DATA;if(D.partsRequests[i])D.partsRequests[i].status=v;}
+function vfUpdateReqCost(i,v){var D=window.TMS_DATA;if(D.partsRequests[i])D.partsRequests[i].cost=parseFloat(v)||0;}
+function vfSaveReq(i){if(typeof _fbPushTMS==='function')_fbPushTMS();sfxSuccess();toast('Saved');}
+function vfDeleteReq(i){
+  var D=window.TMS_DATA;
+  if(!confirm('Delete this request?'))return;
+  D.partsRequests.splice(i,1);
+  if(typeof _fbPushTMS==='function')_fbPushTMS();
+  tmsPartsRequests();
+}
+
+/* ── VALUE FLEET ADMIN: INVOICES ─────────────── */
+function tmsInvoices(){
+  var D=window.TMS_DATA;
+  if(!D.clientInvoices)D.clientInvoices=[];
+  var totalOwed=D.clientInvoices.filter(function(i){return i.status!=='Paid';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
+  var invCards=D.clientInvoices.slice().reverse().map(function(inv,i){
+    var idx=D.clientInvoices.indexOf(inv);
+    var paid=inv.status==='Paid';
+    return '<div style="background:var(--surface);border:0.5px solid '+(paid?'var(--border)':'rgba(123,108,255,0.25)')+';border-radius:12px;padding:14px 16px;margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'+
+      '<div style="flex:1">'+
+      '<div style="font-size:10px;color:var(--accent);letter-spacing:0.08em;margin-bottom:4px">'+inv.clientName+' · '+inv.date+'</div>'+
+      '<div style="font-size:12px;color:var(--text)">'+inv.description+'</div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+      '<div style="font-size:16px;color:'+(paid?'var(--accent2)':'var(--accent)')+'">$'+parseFloat(inv.amount).toFixed(2)+'</div>'+
+      '<span class="tms-badge '+(paid?'green':'purple')+'">'+inv.status+'</span>'+
+      '</div></div>'+
+      (!paid?'<div style="display:flex;gap:8px;margin-top:10px;padding-top:8px;border-top:0.5px solid var(--border)">'+
+      '<button class="tms-btn primary" style="font-size:10px;padding:5px 12px" onclick="vfMarkPaid('+idx+')">Mark Paid</button>'+
+      '<button class="tms-btn" style="font-size:10px;padding:5px 12px;background:rgba(255,80,80,0.1);border-color:rgba(255,80,80,0.3);color:#ff8080" onclick="vfDeleteInvoice('+idx+')">Delete</button>'+
+      '</div>':'')+
+      '</div>';
+  }).join('');
+  var clientNames=[...new Set((TOI_USERS||[]).filter(function(u){return u.role==='clientportal';}).map(function(u){return u.name;}))];
+  var clientOpts=clientNames.map(function(n){return '<option value="'+n+'">'+n+'</option>';}).join('');
+  var bdy=document.getElementById('tms-body');
+  bdy.innerHTML=
+    '<div style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap">'+
+    '<div class="tms-kpi"><div class="tms-kpi-lbl">Outstanding</div><div class="tms-kpi-val" style="color:var(--accent)">$'+totalOwed.toFixed(2)+'</div></div>'+
+    '<div class="tms-kpi"><div class="tms-kpi-lbl">Total Invoices</div><div class="tms-kpi-val">'+D.clientInvoices.length+'</div></div>'+
+    '</div>'+
+    '<div class="tms-section-title" style="font-size:12px">Create Invoice</div>'+
+    '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">'+
+    '<div style="flex:1;min-width:140px"><div style="font-size:9px;color:var(--text3);margin-bottom:5px;letter-spacing:0.08em">CLIENT</div>'+
+    '<select class="tms-input" id="inv-client" style="width:100%;padding:6px 10px;font-size:11px">'+
+    '<option value="">Select client…</option>'+clientOpts+
+    '</select></div>'+
+    '<div style="flex:1;min-width:180px"><div style="font-size:9px;color:var(--text3);margin-bottom:5px;letter-spacing:0.08em">DESCRIPTION</div>'+
+    '<input class="tms-input" id="inv-desc" placeholder="Parts order, labor, etc." style="width:100%;padding:6px 10px;font-size:11px"></div>'+
+    '<div style="flex:0 0 110px"><div style="font-size:9px;color:var(--text3);margin-bottom:5px;letter-spacing:0.08em">AMOUNT ($)</div>'+
+    '<input class="tms-input" id="inv-amount" type="number" min="0" step="0.01" placeholder="0.00" style="width:100%;padding:6px 10px;font-size:11px"></div>'+
+    '<button class="tms-btn primary" onclick="vfCreateInvoice()" style="white-space:nowrap;padding:7px 18px">+ Create</button>'+
+    '</div>'+
+    '<div class="tms-section-title" style="font-size:12px">All Invoices</div>'+
+    (D.clientInvoices.length?invCards:'<div style="font-size:12px;color:var(--text3);padding:8px 0">No invoices yet.</div>');
+}
+function vfCreateInvoice(){
+  var client=document.getElementById('inv-client').value.trim();
+  var desc=document.getElementById('inv-desc').value.trim();
+  var amount=parseFloat(document.getElementById('inv-amount').value)||0;
+  if(!client||!desc||!amount){sfxError();toast('Fill in all fields');return;}
+  var D=window.TMS_DATA;
+  if(!D.clientInvoices)D.clientInvoices=[];
+  D.clientInvoices.push({id:'INV-'+Date.now(),clientName:client,description:desc,amount:amount,status:'Unpaid',date:new Date().toLocaleDateString()});
+  if(typeof _fbPushTMS==='function')_fbPushTMS();
+  sfxSuccess();toast('Invoice created');
+  tmsInvoices();
+}
+function vfMarkPaid(i){
+  var D=window.TMS_DATA;
+  if(D.clientInvoices[i])D.clientInvoices[i].status='Paid';
+  if(typeof _fbPushTMS==='function')_fbPushTMS();
+  sfxSuccess();toast('Marked as paid');
+  tmsInvoices();
+}
+function vfDeleteInvoice(i){
+  if(!confirm('Delete this invoice?'))return;
+  var D=window.TMS_DATA;
+  D.clientInvoices.splice(i,1);
+  if(typeof _fbPushTMS==='function')_fbPushTMS();
+  tmsInvoices();
+}
+
 /* ── CLIENT PORTAL ─────────────────────────── */
 function renderClientPortal(){
   var D=window.TMS_DATA;
   var bdy=document.getElementById('tms-body');
   if(!bdy)return;
+  if(!D.partsRequests)D.partsRequests=[];
+  if(!D.clientInvoices)D.clientInvoices=[];
   var clientName=(currentUser&&currentUser.name)||'';
-  var sc={'In Transit':'purple','Picked Up':'yellow','At Border':'blue','Delivered':'green'};
-  /* Match loads by customer name (case-insensitive) */
-  var myLoads=D.loads.filter(function(l){
-    return l.customer&&l.customer.toLowerCase().indexOf(clientName.toLowerCase())!==-1;
-  });
-  var tab=window._clientPortalTab||'shipments';
-  var tabs=[['shipments','My Shipments'],['track','Track by Ref'],['docs','Documents']];
+  var tab=window._clientPortalTab||'expenses';
+  var tabs=[['expenses','Expenses'],['parts','Parts Needed'],['payment','Payment']];
   var tabBar=tabs.map(function(t){
     var on=tab===t[0];
     return '<button class="tms-status-btn'+(on?' active':'')+'" style="width:auto;padding:8px 16px;margin:0;font-size:11px" onclick="window._clientPortalTab=\''+t[0]+'\';renderClientPortal()">'+t[1]+'</button>';
   }).join('');
   var content='';
-  if(tab==='shipments'){
-    var cards=myLoads.length?myLoads.map(function(l){
-      var cls=sc[l.status]||'purple';
-      var stages=['Picked Up','In Transit','At Border','Delivered'];
-      var cur=stages.indexOf(l.status);
-      var timeline=stages.map(function(s,i){
-        var dotCls=i<cur?'done':i===cur?'active':'pending';
-        return '<div class="tms-tl-item"><div class="tms-tl-dot '+dotCls+'"></div>'+
-          '<div class="tms-tl-text"><div class="tms-tl-label">'+s+'</div></div></div>';
-      }).join('');
-      return '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">'+
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'+
-        '<div><div style="font-size:13px;color:var(--accent)">'+l.id+'</div>'+
-        '<div style="font-size:11px;color:var(--text2);margin-top:2px">'+l.origin+' → '+l.dest+'</div>'+
-        '<div style="font-size:10px;color:var(--text3);margin-top:2px">Ref: <span style="color:var(--accent2)">'+l.ref+'</span>'+(l.commodity?' · '+l.commodity:'')+'</div>'+
-        (l.dispatched?'<div style="font-size:9px;color:var(--text3);margin-top:2px">Dispatched '+l.dispatchDate+'</div>':'')+
-        '</div><span class="tms-badge '+cls+'">'+l.status+'</span></div>'+
-        '<div class="tms-timeline" style="margin-top:6px">'+timeline+'</div>'+
-        '</div>';
-    }).join(''):'<div style="font-size:12px;color:var(--text3);padding:8px 0">No shipments found for your account.</div>';
-    content='<div class="tms-section-title" style="font-size:12px">Your Shipments ('+myLoads.length+')</div>'+cards;
-  } else if(tab==='track'){
+
+  if(tab==='expenses'){
+    var myReqs=D.partsRequests.filter(function(r){return r.clientName&&r.clientName.toLowerCase()===clientName.toLowerCase();});
+    var totalSpent=myReqs.reduce(function(s,r){return s+(parseFloat(r.cost)||0);},0);
+    var statusColor={Pending:'yellow',Ordered:'purple',Delivered:'green'};
+    var cards=myReqs.length?myReqs.map(function(r){
+      var cls=statusColor[r.status]||'purple';
+      return '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'+
+        '<div><div style="font-size:12px;color:var(--text)">'+r.problem+'</div>'+
+        (r.aiSuggestion?'<div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.5">'+r.aiSuggestion+'</div>':'')+
+        '<div style="font-size:9px;color:var(--text3);margin-top:4px">'+r.date+'</div></div>'+
+        '<div style="text-align:right"><span class="tms-badge '+cls+'">'+r.status+'</span>'+
+        (r.cost?'<div style="font-size:12px;color:var(--accent2);margin-top:4px">$'+parseFloat(r.cost).toFixed(2)+'</div>':'')+
+        '</div></div></div>';
+    }).join(''):'<div style="font-size:12px;color:var(--text3);padding:8px 0">No parts history yet.</div>';
     content=
-      '<div class="tms-section-title" style="font-size:12px">Track by Reference Number</div>'+
-      '<div style="display:flex;gap:8px;max-width:400px;margin-bottom:16px">'+
-      '<input class="tms-input" id="cp-ref-input" placeholder="e.g. REF-8821" style="flex:1" onkeydown="if(event.key===\'Enter\')cpLookupRef()">'+
-      '<button class="tms-btn primary" onclick="cpLookupRef()">Track</button></div>'+
-      '<div id="cp-ref-result"></div>';
-  } else if(tab==='docs'){
-    var docCards=myLoads.length?myLoads.map(function(l){
-      var cls=sc[l.status]||'purple';
-      var dispDocs=(l.dispatchDocs&&l.dispatchDocs.length)?
-        l.dispatchDocs.map(function(doc){
-          return '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border-radius:6px;padding:7px 10px;margin-bottom:5px">'+
-            '<div><div style="font-size:11px;color:var(--text)">'+doc.name+'</div>'+
-            '<div style="font-size:9px;color:var(--text3)">'+doc.date+'</div></div>'+
-            '<a href="'+doc.data+'" download="'+doc.name+'" class="tms-btn sm">Download</a></div>';
-        }).join(''):
-        '<div style="font-size:10px;color:var(--text3);padding:4px 0">No documents yet.</div>';
-      var pods=(l.pods&&l.pods.length)?
-        l.pods.map(function(pod){
-          return '<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(78,240,196,0.06);border:0.5px solid rgba(78,240,196,0.2);border-radius:6px;padding:7px 10px;margin-bottom:5px">'+
-            '<div><div style="font-size:11px;color:var(--accent2)">'+pod.name+'</div>'+
-            '<div style="font-size:9px;color:var(--text3)">POD · '+pod.date+'</div></div>'+
-            '<a href="'+pod.data+'" download="'+pod.name+'" class="tms-btn sm">View</a></div>';
-        }).join(''):
-        '<div style="font-size:10px;color:var(--text3);padding:4px 0">No POD uploaded yet.</div>';
-      return '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
-        '<div style="font-size:12px;color:var(--accent)">'+l.id+' — '+l.origin+' → '+l.dest+'</div>'+
-        '<span class="tms-badge '+cls+'">'+l.status+'</span></div>'+
-        '<div style="font-size:9px;color:var(--text3);letter-spacing:0.08em;margin-bottom:6px">DOCUMENTS</div>'+dispDocs+
-        '<div style="font-size:9px;color:var(--text3);letter-spacing:0.08em;margin:8px 0 6px">PROOF OF DELIVERY</div>'+pods+
-        '</div>';
-    }).join(''):'<div style="font-size:12px;color:var(--text3)">No shipments found.</div>';
-    content=docCards;
+      '<div style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap">'+
+      '<div class="tms-kpi"><div class="tms-kpi-lbl">Total Spent</div><div class="tms-kpi-val">$'+totalSpent.toFixed(2)+'</div></div>'+
+      '<div class="tms-kpi"><div class="tms-kpi-lbl">Requests</div><div class="tms-kpi-val">'+myReqs.length+'</div></div>'+
+      '<div class="tms-kpi"><div class="tms-kpi-lbl">Delivered</div><div class="tms-kpi-val">'+myReqs.filter(function(r){return r.status==='Delivered';}).length+'</div></div>'+
+      '</div>'+
+      '<div class="tms-section-title" style="font-size:12px">Parts History</div>'+cards;
   }
+
+  else if(tab==='parts'){
+    content=
+      '<div class="tms-section-title" style="font-size:12px">Describe Your Truck\'s Issue</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.6">Tell us what\'s wrong with your truck. Our AI will suggest the parts you need, and your request will be sent to our team.</div>'+
+      '<textarea class="tms-input" id="vf-problem" rows="4" placeholder="e.g. Engine makes a knocking noise when idling, brake pedal feels spongy..." style="width:100%;resize:vertical;font-family:inherit;line-height:1.6"></textarea>'+
+      '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+
+      '<button class="tms-btn primary" onclick="vfGetAISuggestion()">🤖 Get AI Suggestion</button>'+
+      '<button class="tms-btn" onclick="vfSubmitRequest(false)">Submit Without AI</button>'+
+      '</div>'+
+      '<div id="vf-ai-result" style="margin-top:14px"></div>';
+  }
+
+  else if(tab==='payment'){
+    var myInvoices=D.clientInvoices.filter(function(inv){return inv.clientName&&inv.clientName.toLowerCase()===clientName.toLowerCase();});
+    var totalOwed=myInvoices.filter(function(i){return i.status!=='Paid';}).reduce(function(s,i){return s+(parseFloat(i.amount)||0);},0);
+    var invCards=myInvoices.length?myInvoices.map(function(inv){
+      var paid=inv.status==='Paid';
+      return '<div style="background:var(--surface);border:0.5px solid '+(paid?'var(--border)':'rgba(123,108,255,0.3)')+';border-radius:12px;padding:14px 16px;margin-bottom:10px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<div><div style="font-size:12px;color:var(--text)">'+inv.description+'</div>'+
+        '<div style="font-size:9px;color:var(--text3);margin-top:3px">'+inv.date+'</div></div>'+
+        '<div style="text-align:right"><div style="font-size:15px;color:'+(paid?'var(--accent2)':'var(--accent)')+'">$'+parseFloat(inv.amount).toFixed(2)+'</div>'+
+        '<span class="tms-badge '+(paid?'green':'purple')+'">'+inv.status+'</span></div></div>'+
+        (!paid?'<div style="font-size:10px;color:var(--text3)">Contact your Value Fleet representative to process payment or request a Stripe payment link.</div>':'')+
+        '</div>';
+    }).join(''):'<div style="font-size:12px;color:var(--text3);padding:8px 0">No outstanding invoices.</div>';
+    content=
+      '<div style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap">'+
+      '<div class="tms-kpi"><div class="tms-kpi-lbl">Outstanding</div><div class="tms-kpi-val" style="color:var(--accent)">$'+totalOwed.toFixed(2)+'</div></div>'+
+      '<div class="tms-kpi"><div class="tms-kpi-lbl">Invoices</div><div class="tms-kpi-val">'+myInvoices.length+'</div></div>'+
+      '</div>'+
+      '<div class="tms-section-title" style="font-size:12px">Your Invoices</div>'+invCards;
+  }
+
   bdy.innerHTML=
-    '<div class="tms-section-title">Client Portal</div>'+
+    '<div class="tms-section-title">Value Fleet Portal</div>'+
     '<div class="tms-driver-card">'+
     '<div class="tms-driver-name">'+clientName+'</div>'+
-    '<div class="tms-driver-meta">'+myLoads.length+' shipment'+(myLoads.length!==1?'s':'')+' on record</div>'+
+    '<div class="tms-driver-meta">Powered by toi.ai</div>'+
     '</div>'+
     '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">'+tabBar+'</div>'+
     content;
+}
+
+async function vfGetAISuggestion(){
+  var problem=(document.getElementById('vf-problem').value||'').trim();
+  if(!problem){sfxError();toast('Describe the issue first');return;}
+  var res=document.getElementById('vf-ai-result');
+  res.innerHTML='<div style="font-size:11px;color:var(--text3)">Analysing…</div>';
+  var KEY=window.ANTHROPIC_KEY||window.KEY||'';
+  if(!KEY){res.innerHTML='<div style="font-size:11px;color:rgba(255,80,80,0.8)">No API key set — go to Settings to add your Anthropic key.</div>';return;}
+  try{
+    var resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:'A truck client reports this issue: "'+problem+'"\nList the most likely parts needed with part numbers where possible. Be concise and practical — bullet points only.'}]})});
+    var data=await resp.json();
+    var suggestion=(data.content&&data.content[0]&&data.content[0].text)||'Could not generate suggestion.';
+    window._vfLastSuggestion=suggestion;
+    res.innerHTML=
+      '<div style="background:rgba(78,240,196,0.05);border:0.5px solid rgba(78,240,196,0.2);border-radius:10px;padding:14px 16px;margin-bottom:12px">'+
+      '<div style="font-size:9px;color:var(--accent2);letter-spacing:0.1em;margin-bottom:8px">AI DIAGNOSIS</div>'+
+      '<div style="font-size:11px;color:var(--text);white-space:pre-wrap;line-height:1.7">'+suggestion+'</div>'+
+      '</div>'+
+      '<button class="tms-btn primary" onclick="vfSubmitRequest(true)">Submit Request to Value Fleet</button>';
+    sfxSuccess();
+  }catch(e){res.innerHTML='<div style="font-size:11px;color:rgba(255,80,80,0.8)">Error: '+e.message+'</div>';}
+}
+
+function vfSubmitRequest(withAI){
+  var problem=(document.getElementById('vf-problem').value||'').trim();
+  if(!problem){sfxError();toast('Describe the issue first');return;}
+  var D=window.TMS_DATA;
+  if(!D.partsRequests)D.partsRequests=[];
+  var clientName=(currentUser&&currentUser.name)||'';
+  D.partsRequests.push({
+    id:'PR-'+Date.now(),
+    clientName:clientName,
+    problem:problem,
+    aiSuggestion:withAI?(window._vfLastSuggestion||''):'',
+    status:'Pending',
+    date:new Date().toLocaleDateString(),
+    cost:0
+  });
+  if(typeof _fbPushTMS==='function')_fbPushTMS();
+  window._vfLastSuggestion='';
+  window._clientPortalTab='expenses';
+  renderClientPortal();
+  sfxSuccess();toast('Request submitted — our team will follow up shortly');
 }
 function cpLookupRef(){
   var val=(document.getElementById('cp-ref-input').value||'').trim().toUpperCase();
@@ -5759,25 +6447,30 @@ function tmsUpdateStatus(loadId,status){
     }
     D.finances.revenue=(D.finances.revenue||0)+load.revenue;
   }
-  /* Notify customer by email on every status change */
+  /* Notify customer by email on every status change — check preferredEmail first, then billing email */
   if(load.customer&&load.customer!=='—'){
-    var custObj=(D.customers||[]).find(function(c){return c.name===load.customer||c.company===load.customer;});
-    var custEmail=custObj&&custObj.email;
-    if(custEmail){
+    var toEmail2='';
+    var uMatch2=(window.TOI_USERS||[]).find(function(u){return u.name===load.customer;});
+    if(uMatch2&&uMatch2.preferredEmail)toEmail2=uMatch2.preferredEmail;
+    if(!toEmail2){
+      var custObj=(D.customers||[]).find(function(c){return c.name===load.customer||c.company===load.customer;});
+      if(custObj&&custObj.email)toEmail2=custObj.email;
+    }
+    if(toEmail2){
       var statusEmojis={'Picked Up':'📦','In Transit':'🚛','At Border':'🛃','Delivered':'✅'};
       var ico=statusEmojis[status]||'📋';
       var subj='Load Update '+ico+' — '+load.id+' | '+status;
-      var msg='Dear '+(custObj.name||load.customer)+',\n\nYour shipment has been updated:\n\n'+
-        'Load: '+load.id+'\nReference: '+load.ref+'\n'+
+      var msg='Dear '+load.customer+',\n\nYour shipment has been updated:\n\n'+
+        'Load: '+load.id+'\nReference: '+(load.ref||'—')+'\n'+
         'Route: '+load.origin+' → '+load.dest+'\n'+
         'Status: '+status+'\nUpdated: '+new Date().toLocaleString()+'\n\n'+
         (status==='Delivered'?'Your shipment has been successfully delivered. Please confirm receipt and contact us with any concerns.\n\n':'')+
         'toi.ai — Supply Chain\n';
-      var mailto='mailto:'+encodeURIComponent(custEmail)+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(msg);
+      var mailto='mailto:'+encodeURIComponent(toEmail2)+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(msg);
       var notifyBanner=document.createElement('div');
       notifyBanner.style.cssText='position:fixed;bottom:70px;right:16px;background:var(--surface2);border:0.5px solid rgba(78,240,196,0.35);border-radius:12px;padding:12px 16px;font-size:12px;color:var(--text2);z-index:9999;max-width:300px;box-shadow:0 8px 24px rgba(0,0,0,0.4)';
-      notifyBanner.innerHTML='<div style="color:var(--accent2);font-weight:500;margin-bottom:6px">✉ Notify Customer?</div>'+
-        '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">'+load.customer+' · '+custEmail+'</div>'+
+      notifyBanner.innerHTML='<div style="color:var(--accent2);font-weight:500;margin-bottom:6px">✉ Notify Client?</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">'+load.customer+' · '+toEmail2+'</div>'+
         '<div style="display:flex;gap:8px">'+
         '<button onclick="window.open(\''+mailto+'\',\'_blank\');this.closest(\'[style*=fixed]\').remove()" class="tms-btn sm primary">Send Email</button>'+
         '<button onclick="this.closest(\'[style*=fixed]\').remove()" class="tms-btn sm">Skip</button></div>';
@@ -6936,7 +7629,8 @@ var _h=[
 ["HIS-0558", "ILG-233020", "430 Oberlin Avenue South, Lakewood, NJ, 08701", "5281 Boul Cleroux, Laval, QC, H7T 2E9", "Ashad", "Ilg Logistics", "4/3/2024", 1750.0, "FTL", "Talal"],
 ["HIS-0559", "ILG-233025", "1941 Rutgers University Boulevard, Lakewood, NJ, \t08701", "5281 Boul Cleroux, Laval, QC, H7T 2E9", "Ashad", "Ilg Logistics", "4/3/2024", 1750.0, "FTL", "Talal"],
 ["HIS-0560", "152471", "5775 Kieran, Saint Laurent, QC, H4S 0A3", "5281 Boul Cleroux, Laval, QC, H7T 2E9", "Ashad", "Peerless Logistics Inc", "4/1/2024", 1550.0, "FTL", "Talal"],
-["HIS-0561", "100098", "", "", "Ashad", "Two Way Transportation Consultants", "4/1/2024", 700.0, "FTL", "Talal"]];
+["HIS-0561", "100098", "", "", "Ashad", "Two Way Transportation Consultants", "4/1/2024", 700.0, "FTL", "Talal"],
+["HIS-0562", "20356195", "2288 Main St Extension, Sayreville, NJ 08872", "445 Rue Metivier, Quebec, QC G1M 2T6", "Mosa Transport", "Sabert Corporation", "3/25/2026", 2426.62, "Truckload", "Import"]];
 var D=window.TMS_DATA;
 _h.forEach(function(r){
   D.loads.push({id:r[0],ref:r[1],origin:r[2],dest:r[3],driver:r[4]||'—',truck:'—',
@@ -6944,6 +7638,8 @@ _h.forEach(function(r){
     weight:'—',commodity:'General Freight',loadType:r[8],
     trailerType:"Dry Van 53'",notes:'',posted:false,past:true,bookedBy:r[9]||'—'});
 });
+/* Patch Sabert tender with full details */
+(function(){var sb=D.loads.find(function(l){return l.ref==='20356195';});if(sb){sb.weight='7,373 lbs';sb.pallets=14;sb.commodity='General Freight';sb.notes='PRO: 20356195 | TRLSEAL: 51392 | POs: 945579, PO-223085, 126-4517756 | Contact: Nairobi Morilla | Stops: Sayreville NJ → Quebec QC → Dorval QC | Pay Miles: 712.7';sb.trailerType='Dry Van';sb.source='tender';sb.tenderImported=true;}})();
 })();
 var fState={step:'vault',vault:null,folder:null};
 
@@ -8006,5 +8702,6 @@ async function helpSend(){
   <button class="pwa-dismiss" onclick="pwaDismiss()">×</button>
 </div>
 
+<script src="transport-data.js"></script>
 </body>
 </html>
