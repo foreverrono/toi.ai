@@ -1140,9 +1140,9 @@ function _fbListenTMS(){
   });
 }
 
-var API='https://api.anthropic.com/v1/messages';
+var API='/api/ai';
 var OPENAI_KEY='YOUR_OPENAI_KEY_HERE';
-var KEY=localStorage.getItem('TOI_ANT_KEY')||'';
+var KEY=localStorage.getItem('TOI_ANT_KEY')||'placeholder';
 var PW='ahsan';
 var currentUser=null;
 var TOI_USERS=JSON.parse(localStorage.getItem('TOI_USERS')||'[]');
@@ -2260,7 +2260,7 @@ function rzta(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeigh
 function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
 function suggest(txt){var i=document.getElementById('inp');if(i){i.value=txt;sendMsg();}}
 
-function hdrs(){return{'Content-Type':'application/json','x-api-key':KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};}
+function hdrs(){return{'Content-Type':'application/json'};}
 
 /* ════════════════════════════════════════
    RONO MEMORY — adaptive learning layer
@@ -2580,8 +2580,8 @@ async function studioGenerate(key){
   var sourcingCols=document.getElementById('studio-sourcing-cols');
   sourcingCols.style.display='none';
   try{
-    var dRes=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json','x-api-key':KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    var dRes=await fetch('/api/ai',{
+      method:'POST',headers:{'Content-Type':'application/json',},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:700,messages:[{role:'user',content:cfg.designPrompt+'\n\nDescription: '+desc}]})
     });
     var dData=await dRes.json();
@@ -2591,9 +2591,9 @@ async function studioGenerate(key){
     /* Sourcing columns */
     sourcingCols.style.display='grid';
     /* Run all 3 sourcing calls in parallel */
-    var matProm=fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:cfg.sourcingPrompt+'\n\nProduct: '+desc+'\n\nList the top raw materials needed, where to source them globally (specific suppliers/regions), and estimated cost per unit. Be concise and practical.'}]})});
-    var asmProm=fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:cfg.assemblyPrompt+'\n\nProduct: '+desc+'\n\nWhere are the best places to manufacture or assemble this? Name specific countries, cities, and types of factories. Include MOQ and lead time estimates.'}]})});
-    var scmProm=fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:cfg.scmPrompt+'\n\nProduct: '+desc+'\n\nWhat are the best supply chain options: shipping routes, logistics providers, customs considerations, and how to get from factory to end customer most efficiently?'}]})});
+    var matProm=fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:cfg.sourcingPrompt+'\n\nProduct: '+desc+'\n\nList the top raw materials needed, where to source them globally (specific suppliers/regions), and estimated cost per unit. Be concise and practical.'}]})});
+    var asmProm=fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:cfg.assemblyPrompt+'\n\nProduct: '+desc+'\n\nWhere are the best places to manufacture or assemble this? Name specific countries, cities, and types of factories. Include MOQ and lead time estimates.'}]})});
+    var scmProm=fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:cfg.scmPrompt+'\n\nProduct: '+desc+'\n\nWhat are the best supply chain options: shipping routes, logistics providers, customs considerations, and how to get from factory to end customer most efficiently?'}]})});
     var results=await Promise.all([matProm,asmProm,scmProm]);
     var texts=await Promise.all(results.map(function(r){return r.json();}));
     document.querySelector('#studio-col-materials .studio-col-body').textContent=(texts[0].content&&texts[0].content[0])?texts[0].content[0].text:'—';
@@ -2758,8 +2758,8 @@ async function analyseWS(){
   var result=document.getElementById('ws-result');
   if(result)result.textContent='Analysing…';
   try{
-    var r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json','x-api-key':KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    var r=await fetch('/api/ai',{
+      method:'POST',headers:{'Content-Type':'application/json',},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,messages:[{role:'user',content:'You are a portfolio analyst. Analyse this WealthSimple portfolio data and give a concise summary: total value, top holdings, sector exposure, performance, and 3 actionable suggestions.\n\n'+csv.value}]})
     });
     var d=await r.json();
@@ -4921,9 +4921,9 @@ async function tmsTenderProcess(input){
       r.onerror=reject;
       r.readAsDataURL(file);
     });
-    var resp=await fetch('https://api.anthropic.com/v1/messages',{
+    var resp=await fetch('/api/ai',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json',},
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:600,
@@ -6898,7 +6898,7 @@ async function vfGetAISuggestion(){
   var KEY=window.ANTHROPIC_KEY||window.KEY||'';
   if(!KEY){res.innerHTML='<div style="font-size:11px;color:rgba(255,80,80,0.8)">No API key set — go to Settings to add your Anthropic key.</div>';return;}
   try{
-    var resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    var resp=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json',},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:'A truck client reports this issue: "'+problem+'"\nList the most likely parts needed with part numbers where possible. Be concise and practical — bullet points only.'}]})});
     var data=await resp.json();
     var suggestion=(data.content&&data.content[0]&&data.content[0].text)||'Could not generate suggestion.';
@@ -7292,7 +7292,7 @@ async function tmsSubmitQuote(){
     var prompt='Estimate freight cost for: '+ltype+' from '+orig+' to '+dest+
       ', weight '+wgt+' lbs, commodity: '+(com||'General')+', notes: '+(notes||'none')+
       '. Reply with ONLY a short estimate like "$2,400 – $2,800 CAD" and one sentence reason. No extra text.';
-    var r=await fetch('https://api.anthropic.com/v1/messages',{
+    var r=await fetch('/api/ai',{
       method:'POST',
       headers:{'x-api-key':KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:120,messages:[{role:'user',content:prompt}]})
@@ -8343,7 +8343,7 @@ function iftaImport(input){
     var div=document.getElementById('ifta-result');
     if(div){div.innerHTML='<div style="font-size:12px;color:var(--text3);margin-top:12px">🤖 AI is analyzing your data…</div>';}
     try{
-      var r=await fetch('https://api.anthropic.com/v1/messages',{
+      var r=await fetch('/api/ai',{
         method:'POST',
         headers:{'x-api-key':KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
         body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:2000,system:PROMPTS.ifta,messages:[{role:'user',content:'Analyze this IFTA data and return the JSON result:\n\n'+text.substring(0,6000)}]})
@@ -8367,7 +8367,7 @@ async function iftaCalculate(){
   if(div)div.innerHTML='<div style="font-size:12px;color:var(--text3);margin-top:12px">🤖 Calculating IFTA taxes by jurisdiction…</div>';
   var csv='Date,Jurisdiction,Miles,FuelPurchased\n'+entries.map(function(e){return e.date+','+e.jurisdiction+','+e.miles+','+e.fuel;}).join('\n');
   try{
-    var r=await fetch('https://api.anthropic.com/v1/messages',{
+    var r=await fetch('/api/ai',{
       method:'POST',
       headers:{'x-api-key':KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:2000,system:PROMPTS.ifta,messages:[{role:'user',content:'Calculate IFTA for this trip log:\n\n'+csv}]})
@@ -8609,7 +8609,7 @@ async function clothesVisualize(idx){
   var view=document.getElementById('clothes-view');
   if(view)view.innerHTML='<div style="font-size:12px;color:var(--text3)">🎨 Generating visualization for '+item.name+'…</div>';
   try{
-    var r=await fetch('https://api.anthropic.com/v1/messages',{
+    var r=await fetch('/api/ai',{
       method:'POST',
       headers:{'x-api-key':KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,system:PROMPTS.design,messages:[{role:'user',content:'Create a fashion visualization for: '+desc}]})
@@ -8653,7 +8653,7 @@ async function clothesGenerateDesign(){
   var div=document.getElementById('clothes-design-result');
   if(div)div.innerHTML='<div style="font-size:12px;color:var(--text3)">✏️ Designing…</div>';
   try{
-    var r=await fetch('https://api.anthropic.com/v1/messages',{
+    var r=await fetch('/api/ai',{
       method:'POST',
       headers:{'x-api-key':KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,system:'You are a world-class fashion designer. Generate a detailed, production-ready clothing design concept. Include: garment type, silhouette, fabrics, colours, key construction details, target market, and one unique design element. Format as clean paragraphs. Never mention Claude or Anthropic.',messages:[{role:'user',content:prompt}]})
@@ -8670,7 +8670,7 @@ async function clothesGenerateVisual(){
   var div=document.getElementById('clothes-design-result');
   if(div)div.innerHTML='<div style="font-size:12px;color:var(--text3)">🎨 Generating visual…</div>';
   try{
-    var r=await fetch('https://api.anthropic.com/v1/messages',{
+    var r=await fetch('/api/ai',{
       method:'POST',
       headers:{'x-api-key':KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,system:PROMPTS.design,messages:[{role:'user',content:'Create a fashion visualization for: '+prompt}]})
@@ -8722,7 +8722,7 @@ async function clothesGetSourcing(){
   var div=document.getElementById('clothes-source-result');
   if(div)div.innerHTML='<div style="font-size:12px;color:var(--text3)">🌏 Finding sourcing options…</div>';
   try{
-    var r=await fetch('https://api.anthropic.com/v1/messages',{
+    var r=await fetch('/api/ai',{
       method:'POST',
       headers:{'x-api-key':KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:700,system:'You are a global textile and fashion supply chain expert. Give practical sourcing recommendations including: regions (China, Bangladesh, Portugal, etc.), fabric suppliers, MOQ estimates, lead times, cost ranges, and quality tiers. Be specific and actionable. Never mention Claude or Anthropic.',messages:[{role:'user',content:prompt}]})
@@ -8951,7 +8951,7 @@ async function vaSend(text){
   if(bubble){bubble.style.display='';bubble.innerHTML='<span style="color:var(--text3)">You: </span>'+text+'<br><span style="color:var(--accent)">◎ Thinking…</span>';}
   var contextPrompt=PROMPTS.chat+' The user is currently in the '+(_va.context||'main')+" module. Respond concisely — this is a voice interface. Under 3 sentences.";
   try{
-    var r=await fetch('https://api.anthropic.com/v1/messages',{
+    var r=await fetch('/api/ai',{
       method:'POST',
       headers:{'x-api-key':KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:200,system:contextPrompt,messages:[{role:'user',content:text}]})
@@ -9018,7 +9018,7 @@ async function dataImportFromText(moduleName){
   if(div)div.innerHTML='<div style="font-size:12px;color:var(--text3)">🤖 AI is parsing your data…</div>';
   try{
     var system='You are a data migration assistant. The user is importing data from previous software into the '+moduleName+' module. Parse the raw data and return a clean JSON array. Each record should have the most relevant fields for '+moduleName+' (e.g. for finances: {date,description,amount,category,type}; for inventory: {name,category,qty,cost,status}; for loads: {origin,dest,driver,customer,revenue,status}). Return ONLY a valid JSON array, no markdown.';
-    var r=await fetch('https://api.anthropic.com/v1/messages',{
+    var r=await fetch('/api/ai',{
       method:'POST',
       headers:{'x-api-key':KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:2000,system:system,messages:[{role:'user',content:'Parse this data from my previous software:\n\n'+text.substring(0,5000)}]})
@@ -9204,9 +9204,9 @@ async function helpSend(){
   _helpTyping=true;
   helpShowTyping();
   try{
-    var r=await fetch('https://api.anthropic.com/v1/messages',{
+    var r=await fetch('/api/ai',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json',},
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,system:HELP_SYSTEM,messages:_helpHist.slice(-8)})
     });
     var d=await r.json();
