@@ -1,9 +1,9 @@
 export default async function handler(req, res) {
   const { path } = req.query;
-  const key = req.headers['x-samsara-key'];
+  const key = req.headers['x-samsara-key'] || process.env.SAMSARA_API_KEY;
 
   if (!path) return res.status(400).json({ error: 'Missing path' });
-  if (!key) return res.status(401).json({ error: 'Missing x-samsara-key header' });
+  if (!key) return res.status(401).json({ error: 'Samsara API key not configured' });
 
   const url = 'https://api.samsara.com' + path;
   try {
