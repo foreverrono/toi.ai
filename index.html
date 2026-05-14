@@ -5617,14 +5617,11 @@ async function _smFetch(path){
   var key=localStorage.getItem('API_KEY_SAMSARA')||'';
   if(!key)return{ok:false,error:'No API key — set in Admin → Integrations'};
   try{
-    var r=await fetch('https://api.samsara.com'+path,{headers:{'Authorization':'Bearer '+key,'Accept':'application/json'}});
+    var r=await fetch('/api/samsara?path='+encodeURIComponent(path),{headers:{'x-samsara-key':key,'Accept':'application/json'}});
     var json=await r.json();
     return{ok:r.ok,status:r.status,data:json};
   }catch(err){
-    var msg=err.message||'Network error';
-    if(msg.toLowerCase().indexOf('failed to fetch')!==-1||msg.toLowerCase().indexOf('cors')!==-1)
-      msg='CORS blocked — Samsara requires server-side requests. A proxy function is needed.';
-    return{ok:false,error:msg};
+    return{ok:false,error:err.message||'Proxy error'};
   }
 }
 function _smStatusColor(s){
@@ -5820,22 +5817,7 @@ async function smSync(){
     _smFetch('/fleet/trips?startTime='+new Date(Date.now()-7*24*3600*1000).toISOString()+'&endTime='+new Date().toISOString()+'&limit=100')
   ]);
   var vehRes=results[0];var locRes=results[1];var drvRes=results[2];var hosRes=results[3];var tripRes=results[4];
-  var corsBlocked=false;
-  if(!vehRes.ok&&vehRes.error&&vehRes.error.indexOf('CORS')!==-1){corsBlocked=true;}
-  if(corsBlocked){
-    sfxError();
-    var el=document.createElement('div');
-    el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-    el.innerHTML='<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:14px;max-width:480px;width:100%;padding:28px">'+
-      '<div style="font-size:15px;color:var(--text);font-weight:500;margin-bottom:10px">CORS Restriction</div>'+
-      '<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:18px">Samsara\'s API blocks direct browser requests. To enable live data, a small server-side proxy is needed on Vercel.<br><br>Your API key is saved. To add the proxy, ask Claude Code to <strong>"add a Samsara proxy API route on Vercel"</strong>.</div>'+
-      '<button class="tms-btn primary" onclick="this.closest(\'div[style*=position]\').remove()">Got it</button>'+
-    '</div>';
-    document.body.appendChild(el);
-    el.addEventListener('click',function(e){if(e.target===el)el.remove();});
-    if(btn){btn.disabled=false;btn.textContent='↓ Sync Now';}
-    return;
-  }
+  if(!vehRes.ok&&vehRes.error){sfxError();toast(vehRes.error.slice(0,80));if(btn){btn.disabled=false;btn.textContent='↓ Sync Now';}return;}
   if(vehRes.ok){
     var vehList=vehRes.data.data||vehRes.data.vehicles||vehRes.data||[];
     var locMap={};
