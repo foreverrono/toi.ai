@@ -4511,7 +4511,7 @@ var TMS_GROUPS={
   dashboard:{label:'Dashboard',subs:null},
   loads:{label:'Loads',subs:[{k:'transport',l:'Transport'},{k:'dispatch',l:'Dispatch'},{k:'loadboard',l:'Load Board'},{k:'ltlbuilder',l:'LTL Builder'},{k:'quotes',l:'Quotes'}]},
   fleet:{label:'Fleet',subs:[{k:'equipment',l:'Equipment'},{k:'drivers',l:'Drivers'},{k:'driverpay',l:'Driver Pay'}]},
-  operations:{label:'Operations',subs:[{k:'warehousing',l:'Warehousing'},{k:'logistics',l:'Logistics'},{k:'customs',l:'Customs'},{k:'ifta',l:'IFTA'}]},
+  operations:{label:'Operations',subs:[{k:'warehousing',l:'Warehousing'},{k:'logistics',l:'Logistics'},{k:'customs',l:'Customs'},{k:'ifta',l:'IFTA'},{k:'samsara',l:'Samsara'}]},
   business:{label:'Business',subs:[{k:'customers',l:'Customers'},{k:'carriers',l:'Carriers'},{k:'permits',l:'Permits'},{k:'finances',l:'Finances'},{k:'performance',l:'Performance'}]}
 };
 var _tmsActiveGroup='dashboard';
@@ -4601,10 +4601,11 @@ function _tmsDispatch(key){
   else if(key==='customerportal')tmsCustomerPortal();
   else if(key==='driverportal')tmsDriverPortal();
   else if(key==='ifta')tmsIFTA();
+  else if(key==='samsara')tmsSamsara();
 }
 /* Legacy: some internal buttons call tmsTab() directly */
 function tmsTab(key){
-  var groupFor={dashboard:'dashboard',transport:'loads',dispatch:'loads',loadboard:'loads',ltlbuilder:'loads',quotes:'loads',equipment:'fleet',drivers:'fleet',driverpay:'fleet',warehousing:'operations',logistics:'operations',customs:'operations',ifta:'operations',customers:'business',carriers:'business',permits:'business',finances:'business',performance:'business',customerportal:'portals',driverportal:'portals'};
+  var groupFor={dashboard:'dashboard',transport:'loads',dispatch:'loads',loadboard:'loads',ltlbuilder:'loads',quotes:'loads',equipment:'fleet',drivers:'fleet',driverpay:'fleet',warehousing:'operations',logistics:'operations',customs:'operations',ifta:'operations',samsara:'operations',customers:'business',carriers:'business',permits:'business',finances:'business',performance:'business',customerportal:'portals',driverportal:'portals'};
   var g=groupFor[key]||'dashboard';
   _tmsActiveGroup=g;
   document.querySelectorAll('#tms-grouptabs .tms-tab').forEach(function(t){t.classList.toggle('active',t.dataset.group===g);});
@@ -5611,6 +5612,248 @@ async function bcSyncFromBorderConnect(){
   else{toast('All manifests already up to date');}
   tmsCustoms();
 }
+/* ── SAMSARA MODULE ────────────────────────────────────────── */
+async function _smFetch(path){
+  var key=localStorage.getItem('API_KEY_SAMSARA')||'';
+  if(!key)return{ok:false,error:'No API key — set in Admin → Integrations'};
+  try{
+    var r=await fetch('https://api.samsara.com'+path,{headers:{'Authorization':'Bearer '+key,'Accept':'application/json'}});
+    var json=await r.json();
+    return{ok:r.ok,status:r.status,data:json};
+  }catch(err){
+    var msg=err.message||'Network error';
+    if(msg.toLowerCase().indexOf('failed to fetch')!==-1||msg.toLowerCase().indexOf('cors')!==-1)
+      msg='CORS blocked — Samsara requires server-side requests. A proxy function is needed.';
+    return{ok:false,error:msg};
+  }
+}
+function _smStatusColor(s){
+  var m={'driving':'#4ef0c4','online':'#4ef0c4','idle':'#ffc83c','offline':'rgba(255,255,255,0.2)','sleeperBerth':'#7b6cff','offDuty':'rgba(255,255,255,0.2)','onDuty':'#ffc83c'};
+  return m[s]||'rgba(255,255,255,0.2)';
+}
+function _smStatusLabel(s){
+  var m={'driving':'Driving','online':'Online','idle':'Idling','offline':'Offline','sleeperBerth':'Sleeper','offDuty':'Off Duty','onDuty':'On Duty','personalConveyance':'Personal Use','yardMoves':'Yard Moves'};
+  return m[s]||(s||'Unknown');
+}
+function _smHosBar(remaining,limit){
+  if(!limit)return '';
+  var pct=Math.max(0,Math.min(100,Math.round(remaining/limit*100)));
+  var clr=pct>30?'#4ef0c4':pct>10?'#ffc83c':'#ff6b6b';
+  return '<div style="background:rgba(255,255,255,0.07);border-radius:4px;height:5px;width:100%;margin-top:5px">'+
+    '<div style="background:'+clr+';height:5px;border-radius:4px;width:'+pct+'%;transition:width 0.4s"></div></div>'+
+    '<div style="font-size:9px;color:var(--text3);margin-top:3px">'+Math.floor(remaining/3600)+'h '+Math.floor((remaining%3600)/60)+'m remaining</div>';
+}
+window._smTab=window._smTab||'vehicles';
+window._smVehicles=window._smVehicles||null;
+window._smDrivers=window._smDrivers||null;
+window._smHos=window._smHos||null;
+window._smLoading=false;
+function tmsSamsara(){
+  var key=localStorage.getItem('API_KEY_SAMSARA')||'';
+  var tab=window._smTab||'vehicles';
+  var connDot=key
+    ?'<div style="width:7px;height:7px;border-radius:50%;background:#4ef0c4;box-shadow:0 0 6px #4ef0c4;flex-shrink:0"></div><span style="font-size:11px;color:var(--text2)">Connected · Samsara · key …'+key.slice(-6)+'</span>'
+    :'<div style="width:7px;height:7px;border-radius:50%;background:#ff6b6b;flex-shrink:0"></div><span style="font-size:11px;color:#ff6b6b">No API key — Admin → Integrations</span>';
+  function tabBtn(k,l){
+    var on=tab===k;
+    return '<button style="background:'+(on?'rgba(123,108,255,0.12)':'transparent')+';border:0.5px solid '+(on?'rgba(123,108,255,0.5)':'var(--border)')+';border-radius:20px;padding:4px 16px;color:'+(on?'var(--accent)':'var(--text3)')+';font-size:10px;letter-spacing:0.06em;cursor:pointer;transition:all 0.18s" onclick="window._smTab=\''+k+'\';tmsSamsara()">'+l+'</button>';
+  }
+  var tabsHtml=tabBtn('vehicles','Vehicles')+tabBtn('drivers','Drivers')+tabBtn('hos','Hours of Service')+tabBtn('trips','Recent Trips');
+  var bodyHtml='';
+  if(tab==='vehicles'){
+    var veh=window._smVehicles;
+    if(!veh){
+      bodyHtml='<div style="text-align:center;padding:50px 20px;background:var(--surface2);border:0.5px solid var(--border);border-radius:12px">'+
+        '<div style="font-size:30px;margin-bottom:12px">🚛</div>'+
+        '<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Click Sync to load your fleet from Samsara</div>'+
+        '<button class="tms-btn primary" onclick="smSync()">↓ Sync Fleet</button></div>';
+    }else if(!veh.length){
+      bodyHtml='<div style="text-align:center;padding:40px;color:var(--text3);font-size:12px">No vehicles found in your Samsara account</div>';
+    }else{
+      var rows=veh.map(function(v){
+        var loc=v.location||v.gpsOdometerMeters||{};
+        var latStr=loc.latitude?loc.latitude.toFixed(5):'—';
+        var lngStr=loc.longitude?loc.longitude.toFixed(5):'—';
+        var addr=loc.reverseGeo&&loc.reverseGeo.formattedLocation||loc.address||'';
+        var speed=loc.speedMilesPerHour!=null?loc.speedMilesPerHour.toFixed(0)+' mph':(v.staticAssignedVehicle?'':loc.speed?loc.speed+' mph':'—');
+        var st=v.vehicleStatus||v.operationalStatus||'offline';
+        var clr=_smStatusColor(st);
+        var lbl=_smStatusLabel(st);
+        var driver=v.staticAssignedDriver&&v.staticAssignedDriver.name||'—';
+        var odo=v.odometerMeters!=null?(v.odometerMeters/1609.34).toFixed(0)+' mi':'—';
+        return '<tr class="tms-tr">'+
+          '<td class="tms-td"><div style="font-size:12px;color:var(--text);font-weight:500">'+(v.name||v.id)+'</div><div style="font-size:9px;color:var(--text3)">ID: '+v.id+'</div></td>'+
+          '<td class="tms-td" style="font-size:11px;color:var(--text2)">'+(v.make||'')+(v.model?' '+v.model:'')+(v.year?' '+v.year:'')+'</td>'+
+          '<td class="tms-td"><div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:'+clr+';box-shadow:0 0 5px '+clr+'"></div><span style="font-size:11px;color:var(--text2)">'+lbl+'</span></div></td>'+
+          '<td class="tms-td" style="font-size:11px;color:var(--text2)">'+(addr||latStr+' / '+lngStr)+'</td>'+
+          '<td class="tms-td" style="font-size:11px;color:var(--text3)">'+speed+'</td>'+
+          '<td class="tms-td" style="font-size:11px;color:var(--text3)">'+odo+'</td>'+
+          '<td class="tms-td" style="font-size:11px;color:var(--text2)">'+driver+'</td>'+
+          '</tr>';
+      }).join('');
+      bodyHtml='<div style="overflow-x:auto;border:0.5px solid var(--border);border-radius:12px;background:var(--surface2)">'+
+        '<table class="tms-table" style="min-width:780px"><thead><tr>'+
+        '<th class="tms-th">Unit</th><th class="tms-th">Make / Model</th><th class="tms-th">Status</th>'+
+        '<th class="tms-th">Location</th><th class="tms-th">Speed</th><th class="tms-th">Odometer</th><th class="tms-th">Driver</th>'+
+        '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+    }
+  }else if(tab==='drivers'){
+    var drv=window._smDrivers;
+    if(!drv){
+      bodyHtml='<div style="text-align:center;padding:50px 20px;background:var(--surface2);border:0.5px solid var(--border);border-radius:12px">'+
+        '<div style="font-size:30px;margin-bottom:12px">👤</div>'+
+        '<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Click Sync to load your drivers from Samsara</div>'+
+        '<button class="tms-btn primary" onclick="smSync()">↓ Sync Fleet</button></div>';
+    }else if(!drv.length){
+      bodyHtml='<div style="text-align:center;padding:40px;color:var(--text3);font-size:12px">No drivers found in your Samsara account</div>';
+    }else{
+      var drows=drv.map(function(d){
+        var st=d.eldStatus||d.currentHosStatus&&d.currentHosStatus.eldStatus||'offDuty';
+        var clr=_smStatusColor(st);
+        var lbl=_smStatusLabel(st);
+        var phone=d.phone||d.phoneNumber||'—';
+        var lic=d.licenseNumber||d.licenseState?((d.licenseNumber||'')+(d.licenseState?' ('+d.licenseState+')':'')):'—';
+        var carrier=d.carrierSettings&&d.carrierSettings.carrierName||'Mosa Transport';
+        return '<tr class="tms-tr">'+
+          '<td class="tms-td"><div style="font-size:12px;color:var(--text);font-weight:500">'+d.name+'</div><div style="font-size:9px;color:var(--text3)">'+d.username+'</div></td>'+
+          '<td class="tms-td"><div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:'+clr+';box-shadow:0 0 5px '+clr+'"></div><span style="font-size:11px;color:var(--text2)">'+lbl+'</span></div></td>'+
+          '<td class="tms-td" style="font-size:11px;color:var(--text3)">'+phone+'</td>'+
+          '<td class="tms-td" style="font-size:11px;color:var(--text3)">'+lic+'</td>'+
+          '<td class="tms-td" style="font-size:11px;color:var(--text3)">'+carrier+'</td>'+
+          '</tr>';
+      }).join('');
+      bodyHtml='<div style="overflow-x:auto;border:0.5px solid var(--border);border-radius:12px;background:var(--surface2)">'+
+        '<table class="tms-table" style="min-width:620px"><thead><tr>'+
+        '<th class="tms-th">Driver</th><th class="tms-th">ELD Status</th><th class="tms-th">Phone</th><th class="tms-th">License</th><th class="tms-th">Carrier</th>'+
+        '</tr></thead><tbody>'+drows+'</tbody></table></div>';
+    }
+  }else if(tab==='hos'){
+    var hos=window._smHos;
+    if(!hos){
+      bodyHtml='<div style="text-align:center;padding:50px 20px;background:var(--surface2);border:0.5px solid var(--border);border-radius:12px">'+
+        '<div style="font-size:30px;margin-bottom:12px">⏱</div>'+
+        '<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Click Sync to load Hours of Service data</div>'+
+        '<button class="tms-btn primary" onclick="smSync()">↓ Sync Fleet</button></div>';
+    }else if(!hos.length){
+      bodyHtml='<div style="text-align:center;padding:40px;color:var(--text3);font-size:12px">No HOS data available</div>';
+    }else{
+      var hrows=hos.map(function(h){
+        var d=h.driver||{};var name=d.name||h.driverName||'Unknown';
+        var st=h.currentStatus||h.dutyStatus||'offDuty';
+        var clr=_smStatusColor(st);
+        var driveRem=h.remainingTimeInCurrentStatus||0;
+        var shiftRem=h.timeUntilBreak||0;
+        var cycleRem=h.remainingCycleTime||0;
+        return '<tr class="tms-tr">'+
+          '<td class="tms-td"><div style="font-size:12px;color:var(--text);font-weight:500">'+name+'</div></td>'+
+          '<td class="tms-td"><div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:'+clr+';box-shadow:0 0 5px '+clr+'"></div><span style="font-size:11px;color:var(--text2)">'+_smStatusLabel(st)+'</span></div></td>'+
+          '<td class="tms-td"><div style="min-width:100px">'+_smHosBar(driveRem,11*3600)+'</div></td>'+
+          '<td class="tms-td"><div style="min-width:100px">'+_smHosBar(shiftRem,14*3600)+'</div></td>'+
+          '<td class="tms-td"><div style="min-width:100px">'+_smHosBar(cycleRem,70*3600)+'</div></td>'+
+          '</tr>';
+      }).join('');
+      bodyHtml='<div style="overflow-x:auto;border:0.5px solid var(--border);border-radius:12px;background:var(--surface2)">'+
+        '<table class="tms-table" style="min-width:650px"><thead><tr>'+
+        '<th class="tms-th">Driver</th><th class="tms-th">Status</th>'+
+        '<th class="tms-th">Drive Time (11h)</th><th class="tms-th">Shift (14h)</th><th class="tms-th">Cycle (70h)</th>'+
+        '</tr></thead><tbody>'+hrows+'</tbody></table></div>';
+    }
+  }else if(tab==='trips'){
+    var trips=window._smTrips;
+    if(!trips){
+      bodyHtml='<div style="text-align:center;padding:50px 20px;background:var(--surface2);border:0.5px solid var(--border);border-radius:12px">'+
+        '<div style="font-size:30px;margin-bottom:12px">📍</div>'+
+        '<div style="font-size:13px;color:var(--text2);margin-bottom:16px">Click Sync to load recent trips</div>'+
+        '<button class="tms-btn primary" onclick="smSync()">↓ Sync Fleet</button></div>';
+    }else if(!trips.length){
+      bodyHtml='<div style="text-align:center;padding:40px;color:var(--text3);font-size:12px">No trips found</div>';
+    }else{
+      var trows=trips.map(function(t){
+        var startTime=t.startMs||t.startedAtTime;var endTime=t.endMs||t.endedAtTime;
+        var startStr=startTime?new Date(startTime).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+        var endStr=endTime?new Date(endTime).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'In Progress';
+        var dist=t.distanceMeters!=null?(t.distanceMeters/1609.34).toFixed(1)+' mi':t.distanceMiles!=null?t.distanceMiles.toFixed(1)+' mi':'—';
+        var vname=(t.vehicle&&t.vehicle.name)||t.vehicleId||'—';
+        var dname=(t.driver&&t.driver.name)||'—';
+        return '<tr class="tms-tr">'+
+          '<td class="tms-td" style="font-size:11px;color:var(--text2);white-space:nowrap">'+startStr+'</td>'+
+          '<td class="tms-td" style="font-size:11px;color:var(--text2);white-space:nowrap">'+endStr+'</td>'+
+          '<td class="tms-td" style="font-size:11px;color:var(--text2)">'+vname+'</td>'+
+          '<td class="tms-td" style="font-size:11px;color:var(--text2)">'+dname+'</td>'+
+          '<td class="tms-td" style="font-size:11px;color:var(--text2)">'+dist+'</td>'+
+          '<td class="tms-td" style="font-size:9px;color:var(--text3)">'+(t.startAddress||t.startLocation||'')+'</td>'+
+          '<td class="tms-td" style="font-size:9px;color:var(--text3)">'+(t.endAddress||t.endLocation||'')+'</td>'+
+          '</tr>';
+      }).join('');
+      bodyHtml='<div style="overflow-x:auto;border:0.5px solid var(--border);border-radius:12px;background:var(--surface2)">'+
+        '<table class="tms-table" style="min-width:760px"><thead><tr>'+
+        '<th class="tms-th">Start</th><th class="tms-th">End</th><th class="tms-th">Vehicle</th><th class="tms-th">Driver</th><th class="tms-th">Distance</th>'+
+        '<th class="tms-th">From</th><th class="tms-th">To</th>'+
+        '</tr></thead><tbody>'+trows+'</tbody></table></div>';
+    }
+  }
+  document.getElementById('tms-body').innerHTML=
+    '<div style="max-width:1100px">'+
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">'+
+      '<div>'+
+        '<div style="font-size:18px;font-weight:300;color:var(--text);letter-spacing:0.01em;margin-bottom:5px">Samsara Fleet</div>'+
+        '<div style="display:flex;align-items:center;gap:7px">'+connDot+'</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+        (window._smLastSync?'<span style="font-size:10px;color:var(--text3)">Last sync: '+new Date(window._smLastSync).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})+'</span>':'')+
+        '<button class="tms-btn sm" id="sm-sync-btn" onclick="smSync()">↓ Sync Now</button>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">'+tabsHtml+'</div>'+
+    bodyHtml+
+    '</div>';
+}
+async function smSync(){
+  var btn=document.getElementById('sm-sync-btn');
+  if(btn){btn.disabled=true;btn.textContent='Syncing…';}
+  toast('Syncing from Samsara…');
+  var results=await Promise.all([
+    _smFetch('/fleet/vehicles?limit=512'),
+    _smFetch('/fleet/vehicles/locations?limit=512'),
+    _smFetch('/fleet/drivers?limit=512&driverActivationStatus=active'),
+    _smFetch('/fleet/hos/summary?limit=512'),
+    _smFetch('/fleet/trips?startTime='+new Date(Date.now()-7*24*3600*1000).toISOString()+'&endTime='+new Date().toISOString()+'&limit=100')
+  ]);
+  var vehRes=results[0];var locRes=results[1];var drvRes=results[2];var hosRes=results[3];var tripRes=results[4];
+  var corsBlocked=false;
+  if(!vehRes.ok&&vehRes.error&&vehRes.error.indexOf('CORS')!==-1){corsBlocked=true;}
+  if(corsBlocked){
+    sfxError();
+    var el=document.createElement('div');
+    el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    el.innerHTML='<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:14px;max-width:480px;width:100%;padding:28px">'+
+      '<div style="font-size:15px;color:var(--text);font-weight:500;margin-bottom:10px">CORS Restriction</div>'+
+      '<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:18px">Samsara\'s API blocks direct browser requests. To enable live data, a small server-side proxy is needed on Vercel.<br><br>Your API key is saved. To add the proxy, ask Claude Code to <strong>"add a Samsara proxy API route on Vercel"</strong>.</div>'+
+      '<button class="tms-btn primary" onclick="this.closest(\'div[style*=position]\').remove()">Got it</button>'+
+    '</div>';
+    document.body.appendChild(el);
+    el.addEventListener('click',function(e){if(e.target===el)el.remove();});
+    if(btn){btn.disabled=false;btn.textContent='↓ Sync Now';}
+    return;
+  }
+  if(vehRes.ok){
+    var vehList=vehRes.data.data||vehRes.data.vehicles||vehRes.data||[];
+    var locMap={};
+    if(locRes.ok){(locRes.data.data||locRes.data.locations||locRes.data||[]).forEach(function(l){if(l.id)locMap[l.id]=l.location||l;});}
+    vehList.forEach(function(v){if(locMap[v.id])v.location=locMap[v.id];});
+    window._smVehicles=vehList;
+  }else if(vehRes.error){toast(vehRes.error.slice(0,80));}
+  if(drvRes.ok){window._smDrivers=drvRes.data.data||drvRes.data.drivers||drvRes.data||[];}
+  if(hosRes.ok){window._smHos=hosRes.data.data||hosRes.data.hosLogs||hosRes.data||[];}
+  if(tripRes.ok){window._smTrips=tripRes.data.data||tripRes.data.trips||tripRes.data||[];}
+  window._smLastSync=Date.now();
+  var count=(window._smVehicles||[]).length;
+  var dcount=(window._smDrivers||[]).length;
+  sfxSuccess();toast('Synced — '+count+' vehicle(s), '+dcount+' driver(s) ✓');
+  if(btn){btn.disabled=false;btn.textContent='↓ Sync Now';}
+  tmsSamsara();
+}
+/* ── END SAMSARA ───────────────────────────────────────────── */
 function tmsEquipment(){
   var D=window.TMS_DATA;
   var cards=D.equipment.map(function(eq){
