@@ -5323,7 +5323,8 @@ function tmsCustoms(){
       '</div>'+
       '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
         '<input style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:11px;outline:none;width:180px" placeholder="Search trips…" value="'+(window._bcSearch||'')+'" oninput="window._bcSearch=this.value;tmsCustoms()">'+
-        '<button class="tms-btn sm" onclick="bcSyncFromBorderConnect()">↓ Sync from BC</button>'+
+        '<button class="tms-btn sm" onclick="document.getElementById(\'bc-csv-input\').click()">↑ Import CSV</button>'+
+        '<input type="file" id="bc-csv-input" style="display:none" accept=".csv,.xls,.xlsx,.txt" onchange="bcImportCSV(this)">'+
         '<button class="tms-btn sm" onclick="bcRefreshAll()">↻ Refresh All</button>'+
         '<button class="tms-btn primary" id="bc-new-btn" onclick="window._bcShowForm=!window._bcShowForm;tmsCustoms()">'+(showForm?'✕ Cancel':'+ New Trip')+'</button>'+
       '</div>'+
@@ -5399,21 +5400,80 @@ function _bcPortLabel(port,type){
 }
 function bcGetManifests(){try{return JSON.parse(localStorage.getItem('BC_MANIFESTS')||'[]');}catch(e){return[];}}
 function bcSaveManifests(a){localStorage.setItem('BC_MANIFESTS',JSON.stringify(a));}
+function bcImportCSV(input){
+  if(!input.files||!input.files[0])return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var text=e.target.result;
+    var lines=text.split(/\r?\n/).filter(function(l){return l.trim();});
+    if(lines.length<2){sfxError();toast('File appears empty or unreadable');return;}
+    /* Parse header row — detect column positions flexibly */
+    var hdr=lines[0].split(',').map(function(h){return h.replace(/^"|"$/g,'').trim().toLowerCase();});
+    function col(names){for(var i=0;i<hdr.length;i++){for(var j=0;j<names.length;j++){if(hdr[i].indexOf(names[j])!==-1)return i;}}return -1;}
+    var cTrip=col(['trip','manifest','number','id']);
+    var cType=col(['type','program','ace','aci']);
+    var cStatus=col(['status','clearance','response']);
+    var cPort=col(['port','entry','crossing']);
+    var cEta=col(['eta','arrival','date','crossing date']);
+    var cDriver=col(['driver','operator']);
+    var cLoad=col(['load','scn','shipment','ref','po']);
+    var cCommodity=col(['commodity','description','cargo','freight']);
+    var cFiled=col(['filed','created','submitted','sent']);
+    var existing=bcGetManifests();
+    var existIds=existing.reduce(function(m,x){m[x.id]=true;return m;},{});
+    var added=0;var skipped=0;
+    for(var i=1;i<lines.length;i++){
+      var cols=lines[i].match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g)||lines[i].split(',');
+      cols=cols.map(function(c){return c.replace(/^"|"$/g,'').trim();});
+      var tripId=cTrip>=0?cols[cTrip]||'':'IMPORT-'+Date.now()+'-'+i;
+      if(!tripId||existIds[tripId]){skipped++;continue;}
+      var rawType=(cType>=0?cols[cType]||'':'').toUpperCase();
+      var type=rawType.indexOf('ACI')!==-1||rawType.indexOf('CANADA')!==-1?'ACI':'ACE';
+      var rawStatus=(cStatus>=0?cols[cStatus]||'':'');
+      var status=rawStatus.toLowerCase().indexOf('clear')!==-1?'Cleared':rawStatus.toLowerCase().indexOf('submit')!==-1?'Submitted':rawStatus||'Imported';
+      var etaRaw=cEta>=0?cols[cEta]||'':'';
+      var eta='';
+      if(etaRaw){try{var d=new Date(etaRaw);if(!isNaN(d))eta=d.toISOString().slice(0,16);}catch(e){}}
+      var filed=cFiled>=0?cols[cFiled]||new Date().toLocaleDateString():new Date().toLocaleDateString();
+      existing.unshift({
+        id:tripId,
+        type:type,
+        status:status,
+        port:cPort>=0?cols[cPort]||'':'',
+        eta:eta,
+        driver:cDriver>=0?cols[cDriver]||'—':'—',
+        load:cLoad>=0?cols[cLoad]||'':'',
+        commodity:cCommodity>=0?cols[cCommodity]||'':'',
+        submitted:filed,
+        error:'',
+        payload:null,
+        response:null,
+        _imported:true
+      });
+      existIds[tripId]=true;
+      added++;
+    }
+    bcSaveManifests(existing);
+    input.value='';
+    if(added){sfxSuccess();toast('Imported '+added+' trip(s) from CSV ✓'+(skipped?' ('+skipped+' already existed)':''));}
+    else{sfxError();toast('No new trips found — '+skipped+' already in list');}
+    tmsCustoms();
+  };
+  reader.readAsText(input.files[0]);
+}
 async function _bcFetch(method,path,body){
   var key=localStorage.getItem('API_KEY_BORDERCONNECT')||'';
-  if(!key)return{ok:false,error:'No API key — set in Admin → Integrations'};
-  var opts={method:method,headers:{'Content-Type':'application/json','X-API-Key':key}};
+  var headers={'Content-Type':'application/json'};
+  if(key)headers['x-bc-key']=key;
+  var opts={method:method,headers:headers};
   if(body)opts.body=JSON.stringify(body);
   try{
-    var r=await fetch('https://www.borderconnect.com/api/'+path,opts);
+    var r=await fetch('/api/borderconnect?path='+encodeURIComponent(path),opts);
     var txt=await r.text();
     var json;try{json=JSON.parse(txt);}catch(e){json={raw:txt};}
     return{ok:r.ok,status:r.status,data:json};
   }catch(err){
-    var msg=err.message||'Network error';
-    if(msg.toLowerCase().indexOf('cors')!==-1||msg.toLowerCase().indexOf('failed to fetch')!==-1)
-      msg='CORS blocked — manifest saved locally. Use the Detail view to copy JSON and submit via BorderConnect portal.';
-    return{ok:false,error:msg};
+    return{ok:false,error:err.message||'Proxy error'};
   }
 }
 async function bcSubmitManifest(){
