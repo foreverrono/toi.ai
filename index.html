@@ -1665,12 +1665,6 @@ function patchUsers(){
   defaults.forEach(function(d){
     var existing=TOI_USERS.find(function(u){return u.id===d.id;});
     if(!existing){TOI_USERS.push(d);changed=true;}
-    else if(existing.role!==d.role){
-      existing.role=d.role;
-      existing.access=d.access;
-      if(d.driverRef)existing.driverRef=d.driverRef;
-      changed=true;
-    }
   });
   if(changed){saveUsers();_fbPushUsers();}
 }
