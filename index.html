@@ -5241,29 +5241,102 @@ function tmsLogistics(){
   '</tr></thead><tbody>'+(loadRows||'<tr><td class="tms-td" colspan="4" style="color:var(--text3)">No active loads.</td></tr>')+'</tbody></table>';
 }
 function tmsCustoms(){
-  var tab=window._bcTab||'manifest';
   var key=localStorage.getItem('API_KEY_BORDERCONNECT')||'';
-  var tabs=[['manifest','📋 Create Manifest'],['status','🔍 Check Clearance'],['history','📜 History']];
-  var tabBar=tabs.map(function(t){
-    var on=t[0]===tab;
-    return '<button class="tms-tab'+(on?' active':'')+'" onclick="window._bcTab=\''+t[0]+'\';tmsCustoms()">'+t[1]+'</button>';
+  var showForm=window._bcShowForm||false;
+  var filter=window._bcFilter||'all';
+  var search=(window._bcSearch||'').toLowerCase();
+  var manifests=bcGetManifests();
+  var filtered=manifests.filter(function(m){
+    if(filter==='ace'&&m.type!=='ACE')return false;
+    if(filter==='aci'&&m.type!=='ACI')return false;
+    if(search&&m.id.toLowerCase().indexOf(search)===-1&&m.driver.toLowerCase().indexOf(search)===-1&&m.load.toLowerCase().indexOf(search)===-1&&(m.commodity||'').toLowerCase().indexOf(search)===-1)return false;
+    return true;
+  });
+  var connDot=key
+    ?'<div style="width:7px;height:7px;border-radius:50%;background:#4ef0c4;box-shadow:0 0 6px #4ef0c4;flex-shrink:0"></div><span style="font-size:11px;color:var(--text2)">Connected · BorderConnect · key …'+key.slice(-6)+'</span>'
+    :'<div style="width:7px;height:7px;border-radius:50%;background:#ff6b6b;flex-shrink:0"></div><span style="font-size:11px;color:#ff6b6b">No API key — Admin → Integrations</span>';
+  var counts={all:manifests.length,ace:manifests.filter(function(m){return m.type==='ACE';}).length,aci:manifests.filter(function(m){return m.type==='ACI';}).length};
+  var filtersHtml=[['all','All Trips'],['ace','ACE — US Entry'],['aci','ACI — Canada Entry']].map(function(f){
+    var on=filter===f[0];
+    return '<button style="background:'+(on?'rgba(123,108,255,0.1)':'transparent')+';border:0.5px solid '+(on?'rgba(123,108,255,0.45)':'var(--border)')+';border-radius:20px;padding:4px 14px;color:'+(on?'var(--accent)':'var(--text3)')+';font-size:10px;letter-spacing:0.06em;cursor:pointer;transition:all 0.18s" onclick="window._bcFilter=\''+f[0]+'\';tmsCustoms()">'+f[1]+'<span style="opacity:0.55;margin-left:5px">('+counts[f[0]]+')</span></button>';
   }).join('');
-  var keyBanner=key
-    ?'<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;padding:9px 14px;background:rgba(78,240,196,0.06);border:0.5px solid rgba(78,240,196,0.2);border-radius:8px"><div style="width:6px;height:6px;border-radius:50%;background:#4ef0c4;flex-shrink:0"></div><span style="font-size:11px;color:var(--text2)">BorderConnect connected · key …'+key.slice(-6)+'</span></div>'
-    :'<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;padding:9px 14px;background:rgba(255,107,107,0.06);border:0.5px solid rgba(255,107,107,0.2);border-radius:8px"><div style="width:6px;height:6px;border-radius:50%;background:#ff6b6b;flex-shrink:0"></div><span style="font-size:11px;color:#ff6b6b">No API key — Admin → Integrations → BorderConnect</span></div>';
-  var content='';
-  if(tab==='manifest')content=_bcManifestForm();
-  else if(tab==='status')content=_bcStatusForm();
-  else content=_bcHistoryTable();
+  var listHtml;
+  if(!filtered.length){
+    listHtml='<div style="text-align:center;padding:50px 20px;background:var(--surface2);border:0.5px solid var(--border);border-radius:12px">'+
+      '<div style="font-size:32px;margin-bottom:12px">🛃</div>'+
+      '<div style="font-size:13px;color:var(--text2);margin-bottom:6px">'+(manifests.length?'No trips match your filter':'No manifests yet')+'</div>'+
+      '<div style="font-size:11px;color:var(--text3)">'+(manifests.length?'Try clearing the filter':'Click "+ New Trip" to create your first ACE or ACI manifest')+'</div>'+
+      '</div>';
+  }else{
+    var rows=filtered.map(function(m){
+      var clr=_bcStatusColor(m.status);
+      var lbl=_bcStatusLabel(m.status);
+      var portLbl=_bcPortLabel(m.port,m.type);
+      var etaStr=m.eta?new Date(m.eta).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+      return '<tr class="tms-tr" style="cursor:pointer" onclick="bcViewManifest(\''+m.id+'\')">'+
+        '<td class="tms-td" style="white-space:nowrap">'+
+          '<div style="font-family:monospace;font-size:11px;color:var(--text)">'+m.id+'</div>'+
+          '<div style="font-size:9px;color:var(--text3);margin-top:2px">Filed '+m.submitted+'</div>'+
+        '</td>'+
+        '<td class="tms-td"><span class="tms-badge '+(m.type==='ACE'?'purple':'blue')+'">'+m.type+'</span></td>'+
+        '<td class="tms-td">'+
+          '<div style="display:flex;align-items:center;gap:7px">'+
+          '<div style="width:8px;height:8px;border-radius:50%;background:'+clr+';box-shadow:0 0 6px '+clr+';flex-shrink:0"></div>'+
+          '<span style="font-size:11px;color:var(--text2);white-space:nowrap">'+lbl+'</span>'+
+          '</div>'+
+        '</td>'+
+        '<td class="tms-td" style="font-size:11px;color:var(--text2);white-space:nowrap">'+portLbl+'</td>'+
+        '<td class="tms-td" style="font-size:11px;color:var(--text2);white-space:nowrap">'+etaStr+'</td>'+
+        '<td class="tms-td" style="font-size:11px">'+m.driver+'</td>'+
+        '<td class="tms-td" style="font-size:11px;color:var(--text3)">'+m.load+'</td>'+
+        '<td class="tms-td" style="font-size:11px;color:var(--text3)">'+m.commodity+'</td>'+
+        '<td class="tms-td" style="white-space:nowrap" onclick="event.stopPropagation()">'+
+          '<button class="tms-btn sm" onclick="bcViewManifest(\''+m.id+'\')">Detail</button> '+
+          '<button class="tms-btn sm" title="Refresh status from BorderConnect" onclick="bcRefreshStatus(\''+m.id+'\',\''+m.type+'\')">↻</button>'+
+        '</td>'+
+      '</tr>';
+    }).join('');
+    listHtml='<div style="overflow-x:auto;border:0.5px solid var(--border);border-radius:12px;background:var(--surface2)">'+
+      '<table class="tms-table" style="min-width:860px">'+
+      '<thead><tr>'+
+        '<th class="tms-th">Trip Number</th>'+
+        '<th class="tms-th">Type</th>'+
+        '<th class="tms-th">Status</th>'+
+        '<th class="tms-th">Port of Entry</th>'+
+        '<th class="tms-th">Crossing ETA</th>'+
+        '<th class="tms-th">Driver</th>'+
+        '<th class="tms-th">Load #</th>'+
+        '<th class="tms-th">Commodity</th>'+
+        '<th class="tms-th"></th>'+
+      '</tr></thead><tbody>'+rows+'</tbody>'+
+      '</table></div>';
+  }
   document.getElementById('tms-body').innerHTML=
-    '<div style="max-width:760px">'+
-    '<div class="tms-section-title" style="margin-bottom:14px">🛃 BorderConnect eManifest</div>'+
-    keyBanner+
-    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px">'+tabBar+'</div>'+
-    content+
+    '<div style="max-width:1100px">'+
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">'+
+      '<div>'+
+        '<div style="font-size:18px;font-weight:300;color:var(--text);letter-spacing:0.01em;margin-bottom:5px">eManifest Trips</div>'+
+        '<div style="display:flex;align-items:center;gap:7px">'+connDot+'</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+        '<input style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:11px;outline:none;width:180px" placeholder="Search trips…" value="'+(window._bcSearch||'')+'" oninput="window._bcSearch=this.value;tmsCustoms()">'+
+        '<button class="tms-btn sm" onclick="bcRefreshAll()">↻ Refresh All</button>'+
+        '<button class="tms-btn primary" id="bc-new-btn" onclick="window._bcShowForm=!window._bcShowForm;tmsCustoms()">'+(showForm?'✕ Cancel':'+ New Trip')+'</button>'+
+      '</div>'+
+    '</div>'+
+    (showForm?_bcNewTripForm()+'<div style="height:20px"></div>':'')+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'+filtersHtml+'</div>'+
+    listHtml+
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:10px;color:var(--text3);padding:0 2px">'+
+      '<span><span style="color:#4ef0c4">●</span> Pre-Cleared / Cleared</span>'+
+      '<span><span style="color:#ffc83c">●</span> Secondary Inspection</span>'+
+      '<span><span style="color:#ff6b6b">●</span> Exam / Hold</span>'+
+      '<span><span style="color:rgba(255,255,255,0.25)">●</span> Pending / Local</span>'+
+      '<span style="margin-left:auto;color:var(--text3)">Click any row for full trip detail</span>'+
+    '</div>'+
     '</div>';
 }
-function _bcManifestForm(){
+function _bcNewTripForm(){
   var D=window.TMS_DATA;
   var loadOpts=D.loads.length?D.loads.map(function(l){return '<option value="'+l.id+'">'+l.id+(l.ref?' — '+l.ref:'')+(l.driver?' ('+l.driver+')':'')+'</option>';}).join(''):'<option value="">— No loads —</option>';
   var drvOpts=D.drivers.length?D.drivers.map(function(d){return '<option value="'+d.id+'">'+d.name+(d.lic?' · '+d.lic:'')+'</option>';}).join(''):'<option value="">— No drivers —</option>';
@@ -5274,26 +5347,25 @@ function _bcManifestForm(){
   var acePorts='<option value="0901">Ambassador Bridge — Windsor/Detroit</option><option value="0957">Blue Water Bridge — Sarnia/Port Huron</option><option value="0712">Peace Bridge — Fort Erie/Buffalo</option><option value="0801">Rainbow Bridge — Niagara Falls</option><option value="0101">Champlain — Lacolle/Champlain NY</option><option value="0304">Thousand Islands Bridge</option>';
   var now=new Date(Date.now()+3600000);
   var dtStr=now.toISOString().slice(0,16);
-  return '<div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">'+
-    '<div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:16px">Manifest Details</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">'+
-    '<div><label class="tms-label">Load Reference</label><select class="tms-select" id="bc-load">'+loadOpts+'</select></div>'+
+  return '<div style="background:var(--surface2);border:0.5px solid rgba(123,108,255,0.3);border-radius:12px;padding:20px;animation:contentIn 0.2s ease">'+
+    '<div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);margin-bottom:16px">New Trip Manifest</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">'+
     '<div><label class="tms-label">Manifest Type</label><select class="tms-select" id="bc-type" onchange="_bcTogglePorts()">'+
       '<option value="ACE">ACE — US Pre-arrival (entering USA)</option>'+
       '<option value="ACI">ACI — Canada Pre-arrival (entering Canada)</option>'+
     '</select></div>'+
+    '<div><label class="tms-label">Port of Entry</label><select class="tms-select" id="bc-port">'+acePorts+'</select></div>'+
+    '<div><label class="tms-label">Crossing Date & Time (ETA)</label><input class="tms-input" id="bc-eta" type="datetime-local" value="'+dtStr+'"></div>'+
+    '<div><label class="tms-label">Load Reference</label><select class="tms-select" id="bc-load">'+loadOpts+'</select></div>'+
     '<div><label class="tms-label">Driver</label><select class="tms-select" id="bc-driver">'+drvOpts+'</select></div>'+
     '<div><label class="tms-label">Truck</label><select class="tms-select" id="bc-truck">'+truckOpts+'</select></div>'+
-    '<div><label class="tms-label">Trailer (optional)</label><select class="tms-select" id="bc-trailer">'+trailerOpts+'</select></div>'+
-    '<div><label class="tms-label">Port of Entry</label><select class="tms-select" id="bc-port">'+acePorts+'</select></div>'+
-    '<div><label class="tms-label">Estimated Arrival</label><input class="tms-input" id="bc-eta" type="datetime-local" value="'+dtStr+'"></div>'+
-    '<div><label class="tms-label">Commodity</label><input class="tms-input" id="bc-commodity" placeholder="e.g. Auto Parts, General Merchandise"></div>'+
+    '<div><label class="tms-label">Trailer</label><select class="tms-select" id="bc-trailer">'+trailerOpts+'</select></div>'+
+    '<div><label class="tms-label">Commodity / Cargo Description</label><input class="tms-input" id="bc-commodity" placeholder="e.g. Auto Parts, Steel Coils"></div>'+
     '</div>'+
+    '<div style="display:flex;gap:10px;align-items:center">'+
     '<button class="tms-btn primary" id="bc-submit-btn" onclick="bcSubmitManifest()">Submit to BorderConnect</button>'+
+    '<span style="font-size:10px;color:var(--text3)">ACE / ACI required min 1 hour before crossing</span>'+
     '</div>'+
-    '<div style="font-size:10px;color:var(--text3);line-height:1.7;padding:10px 14px;background:var(--surface);border:0.5px solid var(--border);border-radius:8px">'+
-    '<strong style="color:var(--text2)">ACE</strong> — Entering USA · file min 1 hr before arrival. &nbsp;'+
-    '<strong style="color:var(--text2)">ACI</strong> — Entering Canada · file min 1 hr before arrival.'+
     '</div>';
 }
 function _bcTogglePorts(){
@@ -5306,48 +5378,20 @@ function _bcTogglePorts(){
     portSel.innerHTML='<option value="480">Windsor (Blue Water), ON</option><option value="481">Sarnia, ON</option><option value="484">Fort Erie, ON</option><option value="485">Queenston-Lewiston, ON</option><option value="402">Lacolle, QC</option><option value="409">St-Bernard-de-Lacolle, QC</option>';
   }
 }
-function _bcStatusForm(){
-  return '<div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">'+
-    '<div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:16px">Check Clearance Status</div>'+
-    '<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">'+
-    '<div style="flex:1;min-width:220px"><label class="tms-label">Trip / Manifest Number</label>'+
-    '<input class="tms-input" id="bc-tripnum" placeholder="Enter trip number…" style="margin-top:4px"></div>'+
-    '<select class="tms-select" id="bc-status-type" style="width:100px"><option value="ACE">ACE</option><option value="ACI">ACI</option></select>'+
-    '<button class="tms-btn primary" onclick="bcCheckClearance()">Check Status</button>'+
-    '</div>'+
-    '<div id="bc-status-result"></div>'+
-    '</div>'+
-    '<div style="font-size:10px;color:var(--text3);line-height:1.8;padding:10px 14px;background:var(--surface);border:0.5px solid var(--border);border-radius:8px">'+
-    '<span style="color:var(--accent2)">1P</span> Pre-Cleared &nbsp;·&nbsp; '+
-    '<span style="color:var(--accent2)">1A</span> Proceed to Port &nbsp;·&nbsp; '+
-    '<span style="color:#ffc83c">2</span> Secondary Inspection &nbsp;·&nbsp; '+
-    '<span style="color:#ff6b6b">3</span> Do Not Load / Exam &nbsp;·&nbsp; '+
-    '<span style="color:var(--text3)">4</span> Cancelled'+
-    '</div>';
+function _bcStatusColor(s){
+  if(s==='Cleared'||s==='1P'||s==='1A')return '#4ef0c4';
+  if(s==='Submitted'||s==='Active')return '#7b6cff';
+  if(s==='2')return '#ffc83c';
+  if(s==='Error'||s==='3')return '#ff6b6b';
+  return 'rgba(255,255,255,0.22)';
 }
-function _bcHistoryTable(){
-  var manifests=bcGetManifests();
-  if(!manifests.length)return '<div style="font-size:12px;color:var(--text3);text-align:center;padding:30px 0">No manifests yet — create one in the Manifest tab.</div>';
-  var rows=manifests.map(function(m){
-    var sc=m.status==='Cleared'||m.status==='1A'||m.status==='1P'?'green':m.status==='Error'?'red':m.status==='Submitted'?'blue':'yellow';
-    return '<tr class="tms-tr">'+
-    '<td class="tms-td" style="font-size:9px;color:var(--text3);font-family:monospace;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.id+'</td>'+
-    '<td class="tms-td"><span class="tms-badge '+(m.type==='ACE'?'purple':'blue')+'">'+m.type+'</span></td>'+
-    '<td class="tms-td" style="font-size:11px">'+m.load+'</td>'+
-    '<td class="tms-td" style="font-size:11px">'+m.driver+'</td>'+
-    '<td class="tms-td" style="font-size:10px;color:var(--text3)">'+m.port+'</td>'+
-    '<td class="tms-td"><span class="tms-badge '+sc+'">'+m.status+'</span></td>'+
-    '<td class="tms-td" style="font-size:10px;color:var(--text3)">'+m.submitted+'</td>'+
-    '<td class="tms-td" style="white-space:nowrap">'+
-    '<button class="tms-btn sm" onclick="bcViewManifest(\''+m.id+'\')">View</button> '+
-    '<button class="tms-btn sm" onclick="bcRefreshStatus(\''+m.id+'\',\''+m.type+'\')">↻</button>'+
-    '</td></tr>';
-  }).join('');
-  return '<div style="overflow-x:auto"><table class="tms-table"><thead><tr>'+
-    '<th class="tms-th">Trip #</th><th class="tms-th">Type</th><th class="tms-th">Load</th>'+
-    '<th class="tms-th">Driver</th><th class="tms-th">Port</th><th class="tms-th">Status</th>'+
-    '<th class="tms-th">Submitted</th><th class="tms-th"></th>'+
-    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+function _bcStatusLabel(s){
+  return{Cleared:'Cleared','1P':'Pre-Cleared','1A':'Cleared — Proceed',Submitted:'Submitted',Active:'Active','Local Only':'Saved Locally','2':'Secondary Insp.','3':'Exam / Hold',Error:'Error'}[s]||s||'Pending';
+}
+function _bcPortLabel(port,type){
+  var a={'0901':'Ambassador Bridge','0957':'Blue Water Bridge','0712':'Peace Bridge','0801':'Rainbow Bridge','0101':'Champlain/Lacolle','0304':'Thousand Islands'};
+  var c={'480':'Windsor, ON','481':'Sarnia, ON','484':'Fort Erie, ON','485':'Queenston, ON','402':'Lacolle, QC','409':'St-Bernard, QC'};
+  return(type==='ACI'?c:a)[port]||port||'—';
 }
 function bcGetManifests(){try{return JSON.parse(localStorage.getItem('BC_MANIFESTS')||'[]');}catch(e){return[];}}
 function bcSaveManifests(a){localStorage.setItem('BC_MANIFESTS',JSON.stringify(a));}
@@ -5364,7 +5408,7 @@ async function _bcFetch(method,path,body){
   }catch(err){
     var msg=err.message||'Network error';
     if(msg.toLowerCase().indexOf('cors')!==-1||msg.toLowerCase().indexOf('failed to fetch')!==-1)
-      msg='CORS blocked — BorderConnect does not allow direct browser calls. Manifest saved locally. Use the View button to copy JSON and submit via the BorderConnect portal.';
+      msg='CORS blocked — manifest saved locally. Use the Detail view to copy JSON and submit via BorderConnect portal.';
     return{ok:false,error:msg};
   }
 }
@@ -5384,13 +5428,10 @@ async function bcSubmitManifest(){
   var truck=D.equipment.find(function(e){return e.id===truckId;})||{};
   var trailer=trailerId?D.equipment.find(function(e){return e.id===trailerId;}):null;
   var tripNum='MOSA-'+type+'-'+Date.now();
-  var etaDt=eta?new Date(eta).toISOString():'';
   var nameParts=(drv.name||'Driver').split(' ');
   var payload={
-    tripNumber:tripNum,
-    actionCode:'A',
-    portOfEntry:port,
-    estimatedArrivalDatetime:etaDt,
+    tripNumber:tripNum,actionCode:'A',portOfEntry:port,
+    estimatedArrivalDatetime:eta?new Date(eta).toISOString():'',
     carrier:{name:'Mosa Transport',scac:'MOSA'},
     driver:{firstName:nameParts[0]||'',lastName:nameParts.slice(1).join(' ')||nameParts[0]||'',licenseNumber:drv.lic||'',licenseState:'ON'},
     truck:{vin:truck.vin||'',licensePlate:truck.plate||'',licensePlateState:'ON',year:truck.year||'',make:truck.make||''},
@@ -5401,58 +5442,78 @@ async function bcSubmitManifest(){
   if(btn){btn.disabled=true;btn.textContent='Submitting…';}
   var result=await _bcFetch('POST',(type==='ACE'?'ACEhighway':'ACIhighway')+'/trip',payload);
   if(btn){btn.disabled=false;btn.textContent='Submit to BorderConnect';}
-  var status=result.ok?'Submitted':'Error';
+  var status=result.ok?'Submitted':(result.error&&result.error.indexOf('CORS')!==-1?'Local Only':'Error');
   var errorMsg=result.ok?'':(result.error||('HTTP '+result.status));
-  if(!result.ok&&errorMsg.indexOf('CORS')!==-1)status='Local Only';
   var now=new Date();
   var manifests=bcGetManifests();
   manifests.unshift({id:tripNum,type:type,load:loadId,driver:drv.name||drvId,port:port,eta:eta,commodity:commodity,status:status,error:errorMsg,submitted:now.toLocaleDateString()+' '+now.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}),payload:payload,response:result.data||null});
   bcSaveManifests(manifests);
-  if(result.ok){sfxSuccess();toast('Manifest submitted to BorderConnect ✓');}
+  if(result.ok){sfxSuccess();toast('Trip submitted to BorderConnect ✓');}
   else{sfxError();toast(errorMsg.length>60?errorMsg.slice(0,60)+'…':errorMsg);}
-  window._bcTab='history';tmsCustoms();
-}
-async function bcCheckClearance(){
-  var tripNum=((document.getElementById('bc-tripnum')||{}).value||'').trim();
-  var type=(document.getElementById('bc-status-type')||{}).value||'ACE';
-  var res=document.getElementById('bc-status-result');
-  if(!tripNum){sfxError();toast('Enter a trip number');return;}
-  if(res)res.innerHTML='<div style="font-size:11px;color:var(--text3);padding:10px 0">Checking…</div>';
-  var result=await _bcFetch('GET',(type==='ACE'?'ACEhighway':'ACIhighway')+'/trip/'+encodeURIComponent(tripNum)+'/status');
-  if(!res)return;
-  if(result.ok&&result.data){
-    var d=result.data;
-    var code=d.responseCode||d.clearanceCode||d.status||'—';
-    var codeCls=(code==='1P'||code==='1A'||code==='Cleared')?'green':code==='2'?'yellow':'red';
-    res.innerHTML='<div style="padding:14px;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;margin-top:12px">'+
-      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
-      '<span class="tms-badge '+codeCls+'" style="font-size:13px;padding:6px 16px">'+code+'</span>'+
-      '<span style="font-size:12px;color:var(--text2)">'+(d.message||d.statusMessage||d.description||'Response received')+'</span>'+
-      '</div>'+
-      '<pre style="font-size:10px;color:var(--text3);white-space:pre-wrap;word-break:break-all;max-height:180px;overflow-y:auto;background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:10px">'+JSON.stringify(d,null,2)+'</pre>'+
-      '</div>';
-  }else{
-    var errMsg=result.error||('HTTP '+result.status);
-    res.innerHTML='<div style="padding:10px 14px;background:rgba(255,107,107,0.06);border:0.5px solid rgba(255,107,107,0.2);border-radius:8px;margin-top:10px;font-size:11px;color:#ff6b6b">'+errMsg+'</div>';
-  }
+  window._bcShowForm=false;tmsCustoms();
 }
 function bcViewManifest(id){
   var m=bcGetManifests().find(function(x){return x.id===id;});
   if(!m)return;
-  var payloadStr=JSON.stringify(m.payload,null,2);
+  var p=m.payload||{};
+  var d=p.driver||{};var t=p.truck||{};var tr=(p.trailer||[])[0]||{};var s=(p.shipment||[])[0]||{};
+  var clr=_bcStatusColor(m.status);var lbl=_bcStatusLabel(m.status);
+  var portLbl=_bcPortLabel(m.port,m.type);
+  var etaStr=m.eta?new Date(m.eta).toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+  function section(title,rows){
+    return '<div style="margin-bottom:18px">'+
+      '<div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;padding-bottom:6px;border-bottom:0.5px solid var(--border)">'+title+'</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px">'+
+      rows.map(function(r){return '<div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">'+r[0]+'</div><div style="font-size:12px;color:var(--text2)">'+(r[1]||'—')+'</div></div>';}).join('')+
+      '</div></div>';
+  }
   var el=document.createElement('div');
-  el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  el.innerHTML='<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:14px;padding:24px;max-width:620px;width:100%;max-height:82vh;overflow-y:auto">'+
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
-    '<span style="font-size:12px;color:var(--text);font-family:monospace">'+id+'</span>'+
-    '<button class="tms-btn sm" onclick="this.closest(\'div[style*=\\\"position:fixed\\\"]\').remove()">✕</button>'+
+  el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  el.innerHTML='<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:14px;width:100%;max-width:660px;max-height:88vh;overflow-y:auto">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:0.5px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:2">'+
+      '<div>'+
+        '<div style="font-size:13px;font-family:monospace;color:var(--text)">'+m.id+'</div>'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-top:4px">'+
+          '<span class="tms-badge '+(m.type==='ACE'?'purple':'blue')+'" style="font-size:9px">'+m.type+'</span>'+
+          '<div style="display:flex;align-items:center;gap:5px"><div style="width:7px;height:7px;border-radius:50%;background:'+clr+';box-shadow:0 0 5px '+clr+'"></div><span style="font-size:11px;color:var(--text2)">'+lbl+'</span></div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button class="tms-btn sm" onclick="bcRefreshStatus(\''+m.id+'\',\''+m.type+'\')">↻ Check Status</button>'+
+        '<button class="tms-btn sm" onclick="this.closest(\'div[style*=position\\:fixed]\').remove()">✕</button>'+
+      '</div>'+
     '</div>'+
-    (m.error?'<div style="padding:8px 12px;margin-bottom:12px;background:rgba(255,107,107,0.08);border:0.5px solid rgba(255,107,107,0.2);border-radius:6px;font-size:11px;color:#ff6b6b">'+m.error+'</div>':'')+
-    '<div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Payload</div>'+
-    '<pre id="bc-payload-pre" style="font-size:10px;color:var(--text2);white-space:pre-wrap;word-break:break-all;background:var(--surface2);border:0.5px solid var(--border);border-radius:8px;padding:12px;max-height:260px;overflow-y:auto">'+payloadStr+'</pre>'+
-    (m.response?'<div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin:12px 0 6px">API Response</div>'+
-    '<pre style="font-size:10px;color:var(--text2);white-space:pre-wrap;word-break:break-all;background:var(--surface2);border:0.5px solid var(--border);border-radius:8px;padding:12px;max-height:180px;overflow-y:auto">'+JSON.stringify(m.response,null,2)+'</pre>':'')+
-    '<button class="tms-btn" style="margin-top:14px" onclick="navigator.clipboard.writeText(document.getElementById(\'bc-payload-pre\').textContent).then(function(){toast(\'Copied ✓\');})">Copy JSON</button>'+
+    '<div style="padding:20px">'+
+    (m.error?'<div style="padding:10px 14px;margin-bottom:16px;background:rgba(255,107,107,0.07);border:0.5px solid rgba(255,107,107,0.2);border-radius:8px;font-size:11px;color:#ff6b6b">'+m.error+'</div>':'')+
+    section('Trip Details',[
+      ['Port of Entry',portLbl+' ('+m.port+')'],
+      ['Crossing ETA',etaStr],
+      ['Filed',m.submitted],
+      ['Carrier','Mosa Transport (MOSA)']
+    ])+
+    section('Driver',[
+      ['Name',d.firstName+' '+d.lastName],
+      ['License #',d.licenseNumber],
+      ['License State/Prov',d.licenseState],
+      ['Status',m.driver]
+    ])+
+    section('Equipment',[
+      ['Truck Plate',t.licensePlate+' ('+t.licensePlateState+')'],
+      ['Truck Make/Year',(t.make||'')+(t.year?' '+t.year:'')],
+      ['VIN',t.vin||'—'],
+      ['Trailer Plate',tr.licensePlate?(tr.licensePlate+' ('+tr.licensePlateState+')'):'None']
+    ])+
+    section('Shipment / Cargo',[
+      ['SCN / Ref',s.shipmentControlNumber],
+      ['Description',s.description],
+      ['Origin',s.origin||'—'],
+      ['Destination',s.destination||'—'],
+      ['Declared Value',s.declaredValue?'$'+Number(s.declaredValue).toLocaleString():'—'],
+      ['Load #',m.load]
+    ])+
+    (m.response?'<div style="margin-bottom:18px"><div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;padding-bottom:6px;border-bottom:0.5px solid var(--border)">BorderConnect Response</div><pre style="font-size:10px;color:var(--text2);white-space:pre-wrap;word-break:break-all;background:var(--surface2);border:0.5px solid var(--border);border-radius:8px;padding:12px;max-height:140px;overflow-y:auto">'+JSON.stringify(m.response,null,2)+'</pre></div>':'')+
+    '<button class="tms-btn sm" id="bc-copy-btn" onclick="navigator.clipboard.writeText(JSON.stringify('+(JSON.stringify(m.payload).replace(/'/g,"\\'")+',null,2)).then(function(){document.getElementById(\'bc-copy-btn\').textContent=\'Copied ✓\';})')+'">Copy JSON Payload</button>'+
+    '</div>'+
     '</div>';
   document.body.appendChild(el);
   el.addEventListener('click',function(e){if(e.target===el)el.remove();});
@@ -5461,17 +5522,35 @@ async function bcRefreshStatus(id,type){
   var manifests=bcGetManifests();
   var m=manifests.find(function(x){return x.id===id;});
   if(!m)return;
-  toast('Checking…');
+  toast('Checking BorderConnect…');
   var result=await _bcFetch('GET',(type==='ACE'?'ACEhighway':'ACIhighway')+'/trip/'+encodeURIComponent(id)+'/status');
   if(result.ok&&result.data){
     var code=result.data.responseCode||result.data.clearanceCode||result.data.status||'';
-    m.status=(code==='1P'||code==='1A'||code==='Cleared')?'Cleared':code||'Active';
+    m.status=code==='1P'||code==='1A'||code==='Cleared'?'Cleared':code||'Active';
     m.response=result.data;
     bcSaveManifests(manifests);
-    sfxSuccess();toast('Status updated ✓');tmsCustoms();
-  }else{
-    sfxError();toast(result.error||'Status check failed');
+    sfxSuccess();toast('Status updated: '+_bcStatusLabel(m.status));
+    tmsCustoms();
+  }else{sfxError();toast(result.error||'Status check failed');}
+}
+async function bcRefreshAll(){
+  var manifests=bcGetManifests();
+  var pending=manifests.filter(function(m){return m.status==='Submitted'||m.status==='Active'||m.status==='Local Only';});
+  if(!pending.length){toast('No pending manifests to refresh');return;}
+  toast('Refreshing '+pending.length+' trip(s)…');
+  var updated=0;
+  for(var i=0;i<pending.length;i++){
+    var m=pending[i];
+    var result=await _bcFetch('GET',(m.type==='ACE'?'ACEhighway':'ACIhighway')+'/trip/'+encodeURIComponent(m.id)+'/status');
+    if(result.ok&&result.data){
+      var code=result.data.responseCode||result.data.clearanceCode||result.data.status||'';
+      m.status=code==='1P'||code==='1A'||code==='Cleared'?'Cleared':code||'Active';
+      m.response=result.data;updated++;
+    }
   }
+  bcSaveManifests(manifests);
+  sfxSuccess();toast('Refreshed '+updated+' trip(s) ✓');
+  tmsCustoms();
 }
 function tmsEquipment(){
   var D=window.TMS_DATA;
