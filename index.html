@@ -4628,10 +4628,12 @@ function tmsDashboard(){
   var FM=window.FM_LOADS||[];
   var sc={'In Transit':'purple','Picked Up':'yellow','At Border':'blue','Delivered':'green'};
 
-  /* ── Aggregate FM stats ── */
+  /* ── Merge FM loads + TMS loads for stats ── */
+  var tmsAsFM=D.loads.map(function(l){return{revenue:parseFloat(l.revenue)||0,date:l.created||'',driver:l.driver||'—',customer:l.customer||'—',origin:l.origin||'',dest:l.dest||'',dispatcher:l.loadType||''};});
+  var allLoads=FM.concat(tmsAsFM);
   var monthly={},drvS={},custS={},catS={};
   var totalFMrev=0,cadRev=0,usdRev=0;
-  FM.forEach(function(l){
+  allLoads.forEach(function(l){
     var rev=l.revenue||0; totalFMrev+=rev;
     /* monthly */
     var m=l.date&&l.date.match(/(\d+)\/(\d+)\/(\d{4})/);
@@ -4671,7 +4673,7 @@ function tmsDashboard(){
   /* Top drivers */
   var topDrvs=Object.keys(drvS).sort(function(a,b){return drvS[b].loads-drvS[a].loads;}).slice(0,5);
   var drvRows=topDrvs.map(function(n,i){
-    var s=drvS[n],pct=Math.round(s.loads/FM.length*100);
+    var s=drvS[n],pct=allLoads.length?Math.round(s.loads/allLoads.length*100):0;
     var colors=['var(--accent)','var(--accent2)','#ffc83c','#4ec8ff','var(--accent3)'];
     return '<tr class="tms-tr">'+
       '<td class="tms-td" style="color:var(--text)">'+(i+1)+'. '+n+'</td>'+
@@ -4746,7 +4748,7 @@ function tmsDashboard(){
   '<div>'+
   '<div class="tms-section-title">Load Breakdown</div>'+
   '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:16px 18px">'+
-  _fmCategoryBars(FM)+
+  _fmCategoryBars(allLoads)+
   '</div>'+
   '</div>'+
   '</div>'+
@@ -4767,7 +4769,7 @@ function tmsDashboard(){
     var el3=document.getElementById('tkpi-3');if(el3)el3.textContent=topDrv;
     var el3b=document.getElementById('tkpi-3b');if(el3b)el3b.textContent=topDrvLoads+' loads';
     countUp(document.getElementById('tkpi-4'),Object.keys(custS).length,'');
-    countUp(document.getElementById('tkpi-5'),Math.round(totalFMrev/(FM.length||1)),'$');
+    countUp(document.getElementById('tkpi-5'),Math.round(totalFMrev/(allLoads.length||1)),'$');
     var g=document.getElementById('tms-kpi-row');
     if(g){var r=g.getBoundingClientRect();burstAt(r.left+r.width/2,r.top+r.height/2,14,'123,108,255');}
   },100);
