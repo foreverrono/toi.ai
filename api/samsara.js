@@ -13,7 +13,9 @@ export default async function handler(req, res) {
         'Accept': 'application/json',
       },
     });
-    const data = await upstream.json();
+    const text = await upstream.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = { raw: text }; }
     res.status(upstream.status).json(data);
   } catch (err) {
     res.status(500).json({ error: err.message || 'Proxy error' });
