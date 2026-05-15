@@ -2637,7 +2637,16 @@ function studioReload(key,idx){
 /* ════════════════════════════════════════
    TRADING — Live Stock Data
    ════════════════════════════════════════ */
-var WATCHLIST=['AAPL','TSLA','NVDA','AMZN','MSFT','BTC-USD','ETH-USD'];
+var WATCHLIST=[
+  /* Tech */       'AAPL','MSFT','NVDA','AMZN','GOOGL','META','TSLA','AMD','INTC','ORCL','AVGO','QCOM','CRM','ADBE','NFLX',
+  /* Finance */    'JPM','BAC','GS','V','MA','BRK-B','AXP',
+  /* Energy */     'XOM','CVX','SLB','OXY','COP',
+  /* Healthcare */ 'JNJ','PFE','UNH','ABBV','MRK','LLY',
+  /* Transport */  'UNP','FDX','UPS','DAL','UAL','JBHT','ODFL',
+  /* Consumer */   'WMT','COST','TGT','MCD','SBUX','NKE',
+  /* Canadian */   'RY.TO','TD.TO','CNR.TO','CP.TO','SU.TO','ABX.TO','BCE.TO','TRI.TO',
+  /* Crypto */     'BTC-USD','ETH-USD','SOL-USD','BNB-USD','XRP-USD'
+];
 var INDICES=[
   {sym:'SPY',name:'S&P 500'},
   {sym:'QQQ',name:'NASDAQ'},
@@ -2882,7 +2891,7 @@ async function tradingRunSignals(){
     var r=await fetch('/api/ai',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:prompt}]})
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:[{role:'user',content:prompt}]})
     });
     var d=await r.json();
     var text=(d.content&&d.content[0]&&d.content[0].text)||'No signals generated.';
