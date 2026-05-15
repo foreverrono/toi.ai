@@ -111,6 +111,9 @@ body::after{content:'';position:fixed;bottom:-140px;right:-140px;width:480px;hei
 
 /* ── LOGIN ── */
 #s-login{background:var(--bg);}
+#s-otp{background:var(--bg);}
+.otp-box{width:44px;height:54px;text-align:center;font-size:22px;font-weight:300;color:var(--text);background:var(--surface);border:0.5px solid var(--border);border-radius:10px;outline:none;font-family:inherit;transition:border-color 0.18s,box-shadow 0.18s;}
+.otp-box:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(123,108,255,0.18);}
 .lbox{width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;position:relative;z-index:2;}
 .l-logo{display:flex;flex-direction:column;align-items:center;gap:13px;margin-bottom:48px;}
 .l-input{width:100%;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:13px 16px;color:var(--text);font-family:Helvetica,Arial,sans-serif;font-size:14px;font-weight:300;outline:none;transition:border-color 0.25s,box-shadow 0.25s;margin-bottom:9px;}
@@ -887,6 +890,30 @@ body::after{content:'';position:fixed;bottom:-140px;right:-140px;width:480px;hei
     <div class="l-err" id="lerr"></div>
     <button class="l-btn ripple-wrap" onclick="tryLogin();ripple(this,event)">Access toi.ai</button>
     <div class="l-footer">Private access · Restricted model<br><em>— rono.v1 · authorised users only —</em></div>
+  </div>
+</div>
+
+<!-- SCREEN: 2FA OTP -->
+<div class="screen" id="s-otp" style="display:none">
+  <div class="lbox">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:32px;margin-bottom:10px">🔐</div>
+      <div style="font-size:18px;color:var(--text);font-weight:300;margin-bottom:6px">Verification</div>
+      <div style="font-size:12px;color:var(--text3);line-height:1.6" id="otp-subtitle">A 6-digit code was sent to your phone.</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px" id="otp-boxes">
+      <input class="otp-box" maxlength="1" type="tel" inputmode="numeric" pattern="[0-9]" oninput="otpBoxInput(this,0)" onkeydown="otpBoxKey(this,0,event)">
+      <input class="otp-box" maxlength="1" type="tel" inputmode="numeric" pattern="[0-9]" oninput="otpBoxInput(this,1)" onkeydown="otpBoxKey(this,1,event)">
+      <input class="otp-box" maxlength="1" type="tel" inputmode="numeric" pattern="[0-9]" oninput="otpBoxInput(this,2)" onkeydown="otpBoxKey(this,2,event)">
+      <input class="otp-box" maxlength="1" type="tel" inputmode="numeric" pattern="[0-9]" oninput="otpBoxInput(this,3)" onkeydown="otpBoxKey(this,3,event)">
+      <input class="otp-box" maxlength="1" type="tel" inputmode="numeric" pattern="[0-9]" oninput="otpBoxInput(this,4)" onkeydown="otpBoxKey(this,4,event)">
+      <input class="otp-box" maxlength="1" type="tel" inputmode="numeric" pattern="[0-9]" oninput="otpBoxInput(this,5)" onkeydown="otpBoxKey(this,5,event)">
+    </div>
+    <div class="l-err" id="otp-err" style="margin-bottom:10px"></div>
+    <button class="l-btn ripple-wrap" id="otp-submit-btn" onclick="submitOTP();ripple(this,event)">Verify</button>
+    <button onclick="resendOTP()" style="background:none;border:none;color:var(--text3);font-size:11px;cursor:pointer;margin-top:12px;font-family:inherit" id="otp-resend-btn">Resend code</button>
+    <button onclick="showLogin();_otpPending=null;" style="background:none;border:none;color:var(--text3);font-size:11px;cursor:pointer;margin-top:4px;font-family:inherit">← Back</button>
+  </div>
     <div style="margin-top:32px;text-align:center;max-width:280px;">
       <div style="font-size:13px;font-weight:300;color:rgba(201,192,240,0.55);letter-spacing:0.03em;line-height:1.7;font-style:italic;">"true happiness is living in the moment"</div>
       <div style="font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(123,108,255,0.4);margin-top:7px;">— rono</div>
@@ -1631,7 +1658,7 @@ function seedDefaultUsers(){
   var allB=['software','codestudio','entertainment','supplychain','valuefleet','tech','trading','realestate','bizfinance','clothes','food','fitness','bizlegal'];
   var full={all:true,chat:true,personal:allP,business:allB};
   TOI_USERS=[
-    {id:'u_ahsan',name:'Ahsan',password:'ahsan',role:'superadmin',access:full},
+    {id:'u_ahsan',name:'Ahsan',password:'ahsan',role:'superadmin',access:full,phone:'+14389220274',twoFA:true},
     {id:'u_mosa',name:'Mosa',password:'mosa',role:'superadmin',access:full},
     {id:'u_talal',name:'Talal',password:'talal',role:'admin',access:full},
     {id:'u_saghir',name:'Saghir',password:'saghir',role:'admin',access:full},
@@ -1674,18 +1701,14 @@ function tryLogin(){
   if(!TOI_USERS.length)seedDefaultUsers();
   else patchUsers();
   var found=TOI_USERS.find(function(u){return u.password===v;});
-  if(!found&&v===PW)found={id:'u_ahsan',name:'Ahsan',role:'superadmin',password:v,access:{all:true,chat:true}};
+  if(!found&&v===PW)found={id:'u_ahsan',name:'Ahsan',role:'superadmin',password:v,access:{all:true,chat:true},phone:'+14389220274',twoFA:true};
   if(found){
-    currentUser=found;
-    sfxLogin();burst();
-    burstAt(canvas.width/2,canvas.height/2,30,'78,240,196');
     document.getElementById('lpw').value='';
-    setGreeting();
-    var priv=found.role==='superadmin'||found.role==='admin';
-    document.getElementById('admin-card-wrap').style.display=priv?'':'none';
-    if(priv){document.querySelectorAll('.sel-card-wrap').forEach(function(w){w.style.display='';});subMenuCache={};}
-    else applyClientAccess();
-    setTimeout(function(){show('s-select');checkPermitAlerts();},220);
+    if(found.twoFA&&found.phone){
+      initiateOTP(found);
+    }else{
+      completeLogin(found);
+    }
   }else{
     sfxError();
     e.textContent='Access denied.';
@@ -1695,6 +1718,103 @@ function tryLogin(){
     lbox.style.animation='shake 0.4s ease';
     setTimeout(function(){e.textContent='';document.getElementById('lpw').style.borderColor='';lbox.style.animation='';},2500);
   }
+}
+function completeLogin(found){
+  currentUser=found;
+  sfxLogin();burst();
+  burstAt(canvas.width/2,canvas.height/2,30,'78,240,196');
+  setGreeting();
+  var priv=found.role==='superadmin'||found.role==='admin';
+  document.getElementById('admin-card-wrap').style.display=priv?'':'none';
+  if(priv){document.querySelectorAll('.sel-card-wrap').forEach(function(w){w.style.display='';});subMenuCache={};}
+  else applyClientAccess();
+  setTimeout(function(){show('s-select');checkPermitAlerts();},220);
+}
+
+/* ── 2FA OTP ── */
+var _otpPending=null; /* {user, sig, expiry} */
+async function initiateOTP(user){
+  var sub=document.getElementById('otp-subtitle');
+  var err=document.getElementById('otp-err');
+  var btn=document.getElementById('otp-submit-btn');
+  var resend=document.getElementById('otp-resend-btn');
+  if(sub)sub.textContent='Sending code to '+user.phone.replace(/(\+\d{1,2})(\d{3})(\d{3})(\d{4})/,'$1 ($2) $3-$4')+'…';
+  if(err)err.textContent='';
+  if(btn)btn.disabled=true;
+  if(resend)resend.disabled=true;
+  show('s-otp');
+  /* Focus first box */
+  setTimeout(function(){var b=document.querySelector('.otp-box');if(b)b.focus();},300);
+  try{
+    var r=await fetch('/api/send-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:user.phone})});
+    var d=await r.json();
+    if(!r.ok||d.error){if(err)err.textContent=d.error||'Failed to send code';if(btn)btn.disabled=false;return;}
+    _otpPending={user:user,sig:d.sig,expiry:d.expiry};
+    var masked=user.phone.slice(0,-4).replace(/\d/g,'•')+user.phone.slice(-4);
+    if(sub)sub.textContent='Code sent to '+masked+'. Enter it below.';
+    if(btn)btn.disabled=false;
+    if(resend)resend.disabled=false;
+    /* Start 5-min countdown */
+    otpStartCountdown(d.expiry);
+  }catch(e){if(err)err.textContent='Network error — try again';if(btn)btn.disabled=false;}
+}
+async function submitOTP(){
+  if(!_otpPending){showLogin();return;}
+  var boxes=[].slice.call(document.querySelectorAll('.otp-box'));
+  var otp=boxes.map(function(b){return b.value;}).join('');
+  var err=document.getElementById('otp-err');
+  var btn=document.getElementById('otp-submit-btn');
+  if(otp.length!==6){if(err)err.textContent='Enter all 6 digits';return;}
+  if(btn){btn.disabled=true;btn.textContent='Verifying…';}
+  if(err)err.textContent='';
+  try{
+    var r=await fetch('/api/verify-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({otp:otp,sig:_otpPending.sig,expiry:_otpPending.expiry,phone:_otpPending.user.phone})});
+    var d=await r.json();
+    if(d.ok){
+      var u=_otpPending.user;_otpPending=null;
+      completeLogin(u);
+    }else{
+      if(err)err.textContent=d.error||'Incorrect code — try again';
+      boxes.forEach(function(b){b.value='';b.style.borderColor='rgba(255,107,107,0.5)';});
+      if(boxes[0])boxes[0].focus();
+      setTimeout(function(){boxes.forEach(function(b){b.style.borderColor='';});},2000);
+    }
+  }catch(e){if(err)err.textContent='Network error';}
+  if(btn){btn.disabled=false;btn.textContent='Verify';}
+}
+async function resendOTP(){
+  if(!_otpPending)return;
+  var resend=document.getElementById('otp-resend-btn');
+  if(resend){resend.disabled=true;resend.textContent='Sending…';}
+  await initiateOTP(_otpPending.user);
+  if(resend){resend.textContent='Resend code';}
+}
+function otpStartCountdown(expiry){
+  var resend=document.getElementById('otp-resend-btn');
+  if(!resend)return;
+  var iv=setInterval(function(){
+    var left=Math.max(0,Math.ceil((expiry-Date.now())/1000));
+    if(!document.getElementById('otp-resend-btn')){clearInterval(iv);return;}
+    if(left>0){resend.textContent='Resend ('+left+'s)';resend.disabled=true;}
+    else{resend.textContent='Resend code';resend.disabled=false;clearInterval(iv);}
+  },1000);
+}
+function otpBoxInput(el,idx){
+  el.value=el.value.replace(/[^0-9]/g,'');
+  if(el.value){
+    var next=document.querySelectorAll('.otp-box')[idx+1];
+    if(next)next.focus();
+    else{document.getElementById('otp-submit-btn').focus();}
+    /* Auto-submit when last box filled */
+    if(idx===5)submitOTP();
+  }
+}
+function otpBoxKey(el,idx,e){
+  if(e.key==='Backspace'&&!el.value){
+    var prev=document.querySelectorAll('.otp-box')[idx-1];
+    if(prev){prev.value='';prev.focus();}
+  }
+  if(e.key==='Enter')submitOTP();
 }
 function applyClientAccess(){
   var role=(currentUser&&currentUser.role)||'client';
@@ -4482,6 +4602,7 @@ function adminRenderUsers(){
     '</div>'+
     '<div style="display:flex;align-items:center;gap:10px;margin-top:3px">'+
     '<span style="font-size:10px;color:var(--text3)">Key: <strong style="color:var(--text2);letter-spacing:0.04em">'+u.password+'</strong></span>'+
+    (u.twoFA&&u.phone?'<span style="font-size:9px;background:rgba(78,240,196,0.1);color:var(--accent2);padding:1px 7px;border-radius:8px;letter-spacing:0.06em">2FA ON</span>':'<span style="font-size:9px;color:var(--text3)">No 2FA</span>')+
     '</div>'+
     '</div>'+
     '</div>'+
@@ -4684,6 +4805,10 @@ function adminEditUser(id){
   '<div><label class="adm-label">Passkey</label><input class="adm-input" id="edit-pw" value="'+u.password+'"></div>'+
   '</div>'+
   '<div style="margin:10px 0"><label class="adm-label">Notification Email <span style="color:var(--text3);font-size:9px">(load status updates sent here)</span></label><input class="adm-input" id="edit-email" type="email" placeholder="client@email.com" value="'+(u.preferredEmail||'')+'"></div>'+
+  '<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin:10px 0">'+
+  '<div><label class="adm-label">Phone Number <span style="color:var(--text3);font-size:9px">(for 2FA — include country code, e.g. +1)</span></label><input class="adm-input" id="edit-phone" type="tel" placeholder="+14389220274" value="'+(u.phone||'')+'"></div>'+
+  '<div><label class="adm-label">2FA</label><label style="display:flex;align-items:center;gap:6px;cursor:pointer;height:32px"><input type="checkbox" id="edit-twofa"'+(u.twoFA?' checked':'')+' style="accent-color:var(--accent);width:14px;height:14px"><span style="font-size:11px;color:var(--text3)">Enable</span></label></div>'+
+  '</div>'+
   (isSuper||u.role!=='superadmin'?'<div style="margin:12px 0"><label class="adm-label">Role</label><select class="adm-input" id="edit-role">'+roleOpts+'</select></div>':'')+
   '<div class="adm-section-lbl">Chat</div><div class="adm-modules"><label class="adm-mod-check"><input type="checkbox" id="edit-chat"'+(u.access.chat?' checked':'')+'> Chat module</label></div>'+
   '<div class="adm-section-lbl">Personal</div><div class="adm-modules">'+pBoxes+'</div>'+
@@ -4710,8 +4835,10 @@ function adminSaveEdit(id){
   var personal=[].slice.call(document.querySelectorAll('.edit-cb-p:checked')).map(function(c){return c.value;});
   var business=[].slice.call(document.querySelectorAll('.edit-cb-b:checked')).map(function(c){return c.value;});
   var email=((document.getElementById('edit-email')||{}).value||'').trim();
+  var phone=((document.getElementById('edit-phone')||{}).value||'').trim();
+  var twoFA=!!(document.getElementById('edit-twofa')&&document.getElementById('edit-twofa').checked);
   var allAccess=(role==='admin'||role==='superadmin');
-  u.name=name;u.password=pw;u.role=role;u.preferredEmail=email||null;
+  u.name=name;u.password=pw;u.role=role;u.preferredEmail=email||null;u.phone=phone||null;u.twoFA=twoFA&&!!phone;
   u.access={all:allAccess,chat:chat||allAccess,personal:allAccess?['memories','translate','health','finances','permits','legal']:personal,business:allAccess?['software','codestudio','entertainment','supplychain','valuefleet','tech','trading','realestate','bizfinance','bizoverview','clothes','food','fitness','bizlegal']:business};
   saveUsers();
   sfxSuccess();toast('User updated · '+name);
