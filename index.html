@@ -2684,92 +2684,191 @@ function sparkSVG(closes){
   var col=closes[closes.length-1]>=closes[0]?'#4ef0c4':'rgba(255,107,107,0.8)';
   return '<svg class="trading-spark" viewBox="0 0 60 20"><polyline points="'+pts.join(' ')+'" fill="none" stroke="'+col+'" stroke-width="1.5" stroke-linejoin="round"/></svg>';
 }
+var _tradingTab='market';
 async function renderTrading(){
   sfxWhoosh();
+  var tabs=[{k:'market',l:'Market'},{k:'trades',l:'My Trades'},{k:'signals',l:'AI Signals'}];
+  var tabBtns=tabs.map(function(t){
+    var on=t.k===_tradingTab;
+    return '<button onclick="switchTradingTab(\''+t.k+'\')" style="background:transparent;border:none;border-bottom:2px solid '+(on?'var(--accent)':'transparent')+';padding:10px 18px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:'+(on?'var(--text)':'var(--text3)')+';cursor:pointer;white-space:nowrap;font-family:inherit;transition:all 0.18s">'+t.l+'</button>';
+  }).join('');
   document.getElementById('content').innerHTML=
-  '<div class="trading-wrap">'+
-  '<div class="trading-ws-card">'+
-  '<div class="trading-ws-title">💳 WealthSimple</div>'+
-  '<div class="trading-ws-body">WealthSimple does not offer a public API. To connect your portfolio data, export your holdings as CSV from your WealthSimple account and the AI will analyse it for you.</div>'+
-  '<textarea class="trading-input" id="ws-csv" style="width:100%;margin-top:10px;min-height:60px;resize:vertical;" placeholder="Paste WealthSimple CSV data here…"></textarea>'+
-  '<button class="trading-search-btn" style="margin-top:8px;" onclick="analyseWS()">Analyse Portfolio →</button>'+
-  '<div id="ws-result" style="margin-top:10px;font-size:12px;color:var(--text2);white-space:pre-wrap;"></div>'+
+  '<div style="display:flex;flex-direction:column;height:100%;overflow:hidden">'+
+  /* Indices bar */
+  '<div style="display:flex;gap:0;background:var(--surface2);border-bottom:0.5px solid var(--border);overflow-x:auto;flex-shrink:0" id="trading-indices">'+
+  INDICES.map(function(idx){
+    return '<div id="idx-'+idx.sym.replace(/\./g,'-')+'" style="padding:10px 18px;border-right:0.5px solid var(--border);flex-shrink:0;min-width:110px">'+
+    '<div style="font-size:9px;letter-spacing:0.1em;color:var(--text3)">'+idx.name+'</div>'+
+    '<div style="font-size:15px;color:var(--text);font-weight:300;margin-top:1px">—</div>'+
+    '<div style="font-size:10px;color:var(--text3)">…</div></div>';
+  }).join('')+
   '</div>'+
-  '<div class="trading-section-title">Market Indices</div>'+
-  '<div class="trading-indices" id="trading-indices">'+
-  INDICES.map(function(idx){return '<div class="trading-idx" id="idx-'+idx.sym.replace('.','-')+'"><div class="trading-idx-name">'+idx.name+'</div><div class="trading-idx-val">—</div><div class="trading-idx-chg flat">Loading…</div></div>';}).join('')+
+  /* Tab bar */
+  '<div style="display:flex;padding:0 16px;background:var(--surface2);border-bottom:0.5px solid var(--border);flex-shrink:0;overflow-x:auto">'+tabBtns+'</div>'+
+  /* Body */
+  '<div id="trading-tab-body" style="flex:1;overflow-y:auto;padding:20px"></div>'+
+  '</div>';
+  loadIndices();
+  renderTradingTab();
+}
+function switchTradingTab(tab){
+  _tradingTab=tab;
+  document.querySelectorAll('[onclick^="switchTradingTab"]').forEach(function(btn){
+    var k=btn.getAttribute('onclick').match(/'(\w+)'/)[1];
+    var on=k===tab;
+    btn.style.borderBottomColor=on?'var(--accent)':'transparent';
+    btn.style.color=on?'var(--text)':'var(--text3)';
+  });
+  renderTradingTab();
+}
+function renderTradingTab(){
+  var body=document.getElementById('trading-tab-body');
+  if(!body)return;
+  if(_tradingTab==='market')renderTradingMarket(body);
+  else if(_tradingTab==='trades')renderTradingTrades(body);
+  else if(_tradingTab==='signals')renderTradingSignals(body);
+}
+function renderTradingMarket(body){
+  var SECTORS=[
+    {label:'Tech',syms:['AAPL','MSFT','NVDA','AMZN','GOOGL','META','TSLA','AMD','INTC','ORCL','AVGO','QCOM','CRM','ADBE','NFLX']},
+    {label:'Finance',syms:['JPM','BAC','GS','V','MA','BRK-B','AXP']},
+    {label:'Energy',syms:['XOM','CVX','SLB','OXY','COP']},
+    {label:'Healthcare',syms:['JNJ','PFE','UNH','ABBV','MRK','LLY']},
+    {label:'Transport',syms:['UNP','FDX','UPS','DAL','UAL','JBHT','ODFL']},
+    {label:'Consumer',syms:['WMT','COST','TGT','MCD','SBUX','NKE']},
+    {label:'Canadian',syms:['RY.TO','TD.TO','CNR.TO','CP.TO','SU.TO','ABX.TO','BCE.TO','TRI.TO']},
+    {label:'Crypto',syms:['BTC-USD','ETH-USD','SOL-USD','BNB-USD','XRP-USD']}
+  ];
+  var addRow='<div style="display:flex;gap:8px;margin-bottom:20px">'+
+  '<input class="trading-input" id="trading-search" placeholder="Add ticker (e.g. GOOGL)" style="flex:1" onkeydown="if(event.key===\'Enter\')tradingAddSymbol()">'+
+  '<button class="trading-search-btn" onclick="tradingAddSymbol()">+ Add</button>'+
+  '</div>';
+  var sectHtml=SECTORS.map(function(s){
+    var cards=s.syms.map(function(sym){return stockCard(sym,null);}).join('');
+    return '<div style="margin-bottom:22px">'+
+    '<div style="font-size:9px;letter-spacing:0.13em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;padding-bottom:6px;border-bottom:0.5px solid var(--border)">'+s.label+'</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px" id="sector-'+s.label+'">'+cards+'</div>'+
+    '</div>';
+  }).join('');
+  body.innerHTML=addRow+sectHtml;
+  loadAllCards();
+}
+function stockCard(sym,q){
+  var id='card-'+sym.replace(/[^a-zA-Z0-9]/g,'-');
+  if(!q){
+    return '<div id="'+id+'" style="background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:12px 14px">'+
+    '<div style="font-size:11px;font-weight:600;color:var(--text);letter-spacing:0.04em">'+sym+'</div>'+
+    '<div style="font-size:20px;color:var(--text);font-weight:200;margin:4px 0 2px;letter-spacing:-0.5px">—</div>'+
+    '<div style="font-size:10px;color:var(--text3)">Loading…</div>'+
+    '</div>';
+  }
+  var up=q.chg>0.001,down=q.chg<-0.001;
+  var chgCol=up?'#4ef0c4':down?'rgba(255,107,107,0.9)':'var(--text3)';
+  var arrow=up?'▲':down?'▼':'—';
+  var border=up?'rgba(78,240,196,0.2)':down?'rgba(255,107,107,0.2)':'var(--border)';
+  var shortName=q.name.replace(/,? Inc\.?$/,'').replace(/,? Corp\.?$/,'').replace(/,? Ltd\.?$/,'');
+  if(shortName.length>18)shortName=shortName.slice(0,16)+'…';
+  return '<div id="'+id+'" style="background:var(--surface);border:0.5px solid '+border+';border-radius:10px;padding:12px 14px;transition:border-color 0.3s">'+
+  '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px">'+
+  '<div style="font-size:11px;font-weight:600;color:var(--text);letter-spacing:0.04em">'+sym+'</div>'+
+  sparkSVG(q.closes)+
   '</div>'+
-  '<div class="trading-section-title">Watchlist</div>'+
-  '<div class="trading-search-row">'+
-  '<input class="trading-input" id="trading-search" placeholder="Add ticker (e.g. GOOGL)" onkeydown="if(event.key===\'Enter\')tradingAddSymbol()">'+
-  '<button class="trading-search-btn" onclick="tradingAddSymbol()">Add</button>'+
+  '<div style="font-size:20px;color:var(--text);font-weight:200;margin:3px 0 1px;letter-spacing:-0.5px">'+fmtPrice(q.price)+'</div>'+
+  '<div style="display:flex;justify-content:space-between;align-items:center">'+
+  '<div style="font-size:9px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px">'+shortName+'</div>'+
+  '<div style="font-size:11px;color:'+chgCol+';font-weight:500">'+arrow+' '+(q.pct>=0?'+':'')+q.pct.toFixed(2)+'%</div>'+
   '</div>'+
-  '<table class="trading-table"><thead><tr>'+
-  '<th class="trading-th">Symbol</th><th class="trading-th">Name</th><th class="trading-th">Price</th><th class="trading-th">Change</th><th class="trading-th">5d Chart</th>'+
-  '</tr></thead><tbody id="trading-tbody"><tr><td colspan="5" class="trading-loading">Loading quotes…</td></tr></tbody></table>'+
-  '<div class="trading-section-title" style="margin-top:20px">My Trades</div>'+
-  '<div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px">'+
-  '<div style="display:grid;grid-template-columns:1fr 80px 80px 100px 120px auto;gap:8px;align-items:end">'+
-  '<div><label style="font-size:9px;color:var(--text3)">SYMBOL</label><input id="tl-sym" class="trading-input" placeholder="AAPL" style="margin-top:3px"></div>'+
-  '<div><label style="font-size:9px;color:var(--text3)">TYPE</label><select id="tl-type" class="trading-input" style="margin-top:3px"><option>Buy</option><option>Sell</option></select></div>'+
-  '<div><label style="font-size:9px;color:var(--text3)">QTY</label><input id="tl-qty" class="trading-input" type="number" placeholder="10" style="margin-top:3px"></div>'+
-  '<div><label style="font-size:9px;color:var(--text3)">PRICE ($)</label><input id="tl-price" class="trading-input" type="number" placeholder="150.00" step="0.01" style="margin-top:3px"></div>'+
-  '<div><label style="font-size:9px;color:var(--text3)">DATE</label><input id="tl-date" class="trading-input" type="date" style="margin-top:3px"></div>'+
+  '</div>';
+}
+async function loadAllCards(){
+  var all=WATCHLIST.slice();
+  var batches=[];
+  for(var i=0;i<all.length;i+=8)batches.push(all.slice(i,i+8));
+  for(var b=0;b<batches.length;b++){
+    var results=await Promise.all(batches[b].map(fetchQuote));
+    results.forEach(function(q){
+      var id='card-'+q.sym.replace(/[^a-zA-Z0-9]/g,'-');
+      var el=document.getElementById(id);
+      if(el)el.outerHTML=stockCard(q.sym,q);
+    });
+  }
+}
+async function loadIndices(){
+  INDICES.forEach(async function(idx){
+    var q=await fetchQuote(idx.sym);
+    var el=document.getElementById('idx-'+idx.sym.replace(/\./g,'-'));
+    if(!el)return;
+    var cls=q.chg>0.001?'up':q.chg<-0.001?'down':'flat';
+    var col=q.chg>0.001?'#4ef0c4':q.chg<-0.001?'rgba(255,107,107,0.9)':'var(--text3)';
+    el.innerHTML='<div style="font-size:9px;letter-spacing:0.1em;color:var(--text3)">'+idx.name+'</div>'+
+    '<div style="font-size:15px;color:var(--text);font-weight:300;margin-top:1px">'+fmtPrice(q.price)+'</div>'+
+    '<div style="font-size:10px;color:'+col+'">'+(q.chg>=0?'+':'')+q.pct.toFixed(2)+'%</div>';
+  });
+}
+function renderTradingTrades(body){
+  body.innerHTML=
+  '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px">'+
+  '<div style="font-size:10px;letter-spacing:0.1em;color:var(--text3);margin-bottom:12px">LOG A TRADE</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 70px 80px 100px 110px auto;gap:8px;align-items:end">'+
+  '<div><div style="font-size:9px;color:var(--text3);margin-bottom:3px">SYMBOL</div><input id="tl-sym" class="trading-input" placeholder="AAPL"></div>'+
+  '<div><div style="font-size:9px;color:var(--text3);margin-bottom:3px">TYPE</div><select id="tl-type" class="trading-input"><option>Buy</option><option>Sell</option></select></div>'+
+  '<div><div style="font-size:9px;color:var(--text3);margin-bottom:3px">QTY</div><input id="tl-qty" class="trading-input" type="number" placeholder="10"></div>'+
+  '<div><div style="font-size:9px;color:var(--text3);margin-bottom:3px">PRICE ($)</div><input id="tl-price" class="trading-input" type="number" placeholder="150.00" step="0.01"></div>'+
+  '<div><div style="font-size:9px;color:var(--text3);margin-bottom:3px">DATE</div><input id="tl-date" class="trading-input" type="date"></div>'+
   '<button class="trading-search-btn" onclick="tradeLogAdd()" style="height:32px;align-self:end">Log</button>'+
   '</div></div>'+
-  '<div id="trade-log-section"></div>'+
-  '<div class="trading-section-title" style="margin-top:28px">AI Signals</div>'+
-  '<div style="background:rgba(123,108,255,0.06);border:0.5px solid rgba(123,108,255,0.25);border-radius:12px;padding:18px 20px;margin-bottom:12px">'+
-  '<div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.6">AI analyses live prices, political climate, sector trends, and company news to generate buy/sell signals with target entry prices. Scans your full watchlist.</div>'+
-  '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">'+
+  '<div id="trade-log-section"></div>';
+  setTimeout(tradingShowLog,50);
+}
+function renderTradingSignals(body){
+  body.innerHTML=
+  '<div style="background:rgba(123,108,255,0.06);border:0.5px solid rgba(123,108,255,0.2);border-radius:12px;padding:18px 20px;margin-bottom:16px">'+
+  '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">'+
   '<button class="trading-search-btn" onclick="tradingRunSignals()" id="signals-btn" style="background:rgba(123,108,255,0.18);border-color:rgba(123,108,255,0.5);padding:10px 20px;font-size:12px">⚡ Run AI Signals</button>'+
   '<button class="trading-search-btn" onclick="tradingMarketScan()" id="scan-btn" style="padding:10px 20px;font-size:12px">📊 Market Scanner</button>'+
   '</div>'+
+  '<div style="font-size:10px;color:var(--text3);line-height:1.6">Analyses all '+WATCHLIST.length+' stocks — live prices, politics, sector trends, company news → BUY / HOLD / SELL with entry prices.</div>'+
+  '</div>'+
   '<div id="trading-scanner" style="display:none;margin-bottom:16px"></div>'+
   '<div id="trading-signals"></div>'+
-  '</div>'+
+  /* WealthSimple at bottom */
+  '<div style="margin-top:24px;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:16px">'+
+  '<div style="font-size:10px;letter-spacing:0.1em;color:var(--text3);margin-bottom:8px">WEALTHSIMPLE PORTFOLIO ANALYSIS</div>'+
+  '<textarea class="trading-input" id="ws-csv" style="width:100%;min-height:60px;resize:vertical;margin-bottom:8px" placeholder="Paste WealthSimple CSV export here…"></textarea>'+
+  '<button class="trading-search-btn" onclick="analyseWS()">Analyse Portfolio →</button>'+
+  '<div id="ws-result" style="margin-top:10px;font-size:12px;color:var(--text2);white-space:pre-wrap;line-height:1.6"></div>'+
   '</div>';
-  /* Load data async */
-  loadTradingData();
-  setTimeout(tradingShowLog,200);
 }
-async function loadTradingData(){
-  /* Indices */
-  INDICES.forEach(async function(idx){
-    var q=await fetchQuote(idx.sym);
-    var el=document.getElementById('idx-'+idx.sym.replace('.','-'));
-    if(!el)return;
-    var cls=q.chg>0.001?'up':q.chg<-0.001?'down':'flat';
-    el.innerHTML='<div class="trading-idx-name">'+idx.name+'</div>'+
-    '<div class="trading-idx-val">'+fmtPrice(q.price)+'</div>'+
-    '<div class="trading-idx-chg '+cls+'">'+(q.chg>=0?'+':'')+q.pct.toFixed(2)+'%</div>';
-  });
-  /* Watchlist */
-  var tbody=document.getElementById('trading-tbody');
-  if(!tbody)return;
-  tbody.innerHTML='<tr><td colspan="5" class="trading-loading">Fetching live data…</td></tr>';
-  var quotes=await Promise.all(WATCHLIST.map(fetchQuote));
-  if(!document.getElementById('trading-tbody'))return;
-  tbody=document.getElementById('trading-tbody');
-  tbody.innerHTML=quotes.map(function(q){
-    return '<tr>'+
-    '<td class="trading-td sym">'+q.sym+'</td>'+
-    '<td class="trading-td" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+q.name+'</td>'+
-    '<td class="trading-td">'+fmtPrice(q.price)+'</td>'+
-    '<td class="trading-td">'+fmtChg(q.chg,q.pct)+'</td>'+
-    '<td class="trading-td">'+sparkSVG(q.closes)+'</td>'+
-    '</tr>';
-  }).join('');
-}
+async function loadTradingData(){loadIndices();loadAllCards();}
 async function tradingAddSymbol(){
   var inp=document.getElementById('trading-search');
   if(!inp||!inp.value.trim())return;
   var sym=inp.value.trim().toUpperCase();
-  if(WATCHLIST.indexOf(sym)===-1)WATCHLIST.push(sym);
   inp.value='';
-  toast('Added '+sym+' to watchlist');
-  sfxPop();
-  loadTradingData();
+  if(WATCHLIST.indexOf(sym)!==-1){toast(sym+' already in watchlist');return;}
+  WATCHLIST.push(sym);
+  /* Add placeholder card to a custom sector at top, then load real data */
+  var customSect=document.getElementById('sector-Custom');
+  if(!customSect){
+    var body=document.getElementById('trading-tab-body');
+    if(body){
+      var div=document.createElement('div');
+      div.style.marginBottom='22px';
+      div.innerHTML='<div style="font-size:9px;letter-spacing:0.13em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;padding-bottom:6px;border-bottom:0.5px solid var(--border)">Custom</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px" id="sector-Custom"></div>';
+      body.insertBefore(div,body.firstChild);
+      customSect=document.getElementById('sector-Custom');
+    }
+  }
+  if(customSect){
+    var ph=document.createElement('div');ph.innerHTML=stockCard(sym,null);
+    customSect.appendChild(ph.firstChild);
+  }
+  sfxPop();toast('Added '+sym);
+  var q=await fetchQuote(sym);
+  var id='card-'+sym.replace(/[^a-zA-Z0-9]/g,'-');
+  var el=document.getElementById(id);
+  if(el)el.outerHTML=stockCard(sym,q);
 }
 async function analyseWS(){
   var csv=document.getElementById('ws-csv');
