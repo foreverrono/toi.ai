@@ -889,6 +889,12 @@ body::after{content:'';position:fixed;bottom:-140px;right:-140px;width:480px;hei
     <input class="l-input" id="lpw" type="password" placeholder="Enter your key" onkeydown="if(event.key==='Enter')tryLogin()"/>
     <div class="l-err" id="lerr"></div>
     <button class="l-btn ripple-wrap" onclick="tryLogin();ripple(this,event)">Access toi.ai</button>
+    <div id="touchid-btn-wrap" style="display:none;margin-top:10px">
+      <button class="l-btn ripple-wrap" id="touchid-btn" onclick="loginWithTouchID();ripple(this,event)" style="background:rgba(255,255,255,0.04);border:0.5px solid var(--border);color:var(--text2);font-size:13px;display:flex;align-items:center;justify-content:center;gap:9px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1C8.5 1 5.5 3.5 5.5 7v1.5M12 1c3.5 0 6.5 2.5 6.5 6V8.5M9 12c0-1.66 1.34-3 3-3s3 1.34 3 3v4M12 9v.01M6.5 12c0-3.03 2.46-5.5 5.5-5.5s5.5 2.47 5.5 5.5v3"/><path d="M12 15v4M9.5 19.5c.7 1 1.5 1.8 2.5 2.5 1-.7 1.8-1.5 2.5-2.5"/></svg>
+        Sign in with Touch ID
+      </button>
+    </div>
     <div class="l-footer">Private access · Restricted model<br><em>— rono.v1 · authorised users only —</em></div>
   </div>
 </div>
@@ -1170,7 +1176,7 @@ function _fbListenTMS(){
 var API='/api/ai';
 var OPENAI_KEY='YOUR_OPENAI_KEY_HERE';
 var KEY=localStorage.getItem('TOI_ANT_KEY')||'placeholder';
-var PW='ahsan';
+var PW='qysbAh-ramjeg-wizki8';
 var currentUser=null;
 var TOI_USERS=JSON.parse(localStorage.getItem('TOI_USERS')||'[]');
 var hist=[];
@@ -1658,7 +1664,7 @@ function seedDefaultUsers(){
   var allB=['software','codestudio','entertainment','supplychain','valuefleet','tech','trading','realestate','bizfinance','clothes','food','fitness','bizlegal'];
   var full={all:true,chat:true,personal:allP,business:allB};
   TOI_USERS=[
-    {id:'u_ahsan',name:'Ahsan',password:'ahsan',role:'superadmin',access:full,phone:'+14389220274',twoFA:true},
+    {id:'u_ahsan',name:'Ahsan',password:'qysbAh-ramjeg-wizki8',role:'superadmin',access:full,phone:'+14389220274',twoFA:true},
     {id:'u_mosa',name:'Mosa',password:'mosa',role:'superadmin',access:full},
     {id:'u_talal',name:'Talal',password:'talal',role:'admin',access:full},
     {id:'u_saghir',name:'Saghir',password:'saghir',role:'admin',access:full},
@@ -1693,6 +1699,9 @@ function patchUsers(){
     var existing=TOI_USERS.find(function(u){return u.id===d.id;});
     if(!existing){TOI_USERS.push(d);changed=true;}
   });
+  /* Migrate Ahsan passkey if still on old value */
+  var ahsan=TOI_USERS.find(function(u){return u.id==='u_ahsan';});
+  if(ahsan&&ahsan.password==='ahsan'){ahsan.password='qysbAh-ramjeg-wizki8';ahsan.phone='+14389220274';ahsan.twoFA=true;changed=true;}
   if(changed){saveUsers();_fbPushUsers();}
 }
 function tryLogin(){
@@ -1701,7 +1710,7 @@ function tryLogin(){
   if(!TOI_USERS.length)seedDefaultUsers();
   else patchUsers();
   var found=TOI_USERS.find(function(u){return u.password===v;});
-  if(!found&&v===PW)found={id:'u_ahsan',name:'Ahsan',role:'superadmin',password:v,access:{all:true,chat:true},phone:'+14389220274',twoFA:true};
+  if(!found&&v===PW)found={id:'u_ahsan',name:'Ahsan',role:'superadmin',password:'qysbAh-ramjeg-wizki8',access:{all:true,chat:true},phone:'+14389220274',twoFA:true};
   if(found){
     document.getElementById('lpw').value='';
     if(found.twoFA&&found.phone){
@@ -1816,6 +1825,78 @@ function otpBoxKey(el,idx,e){
   }
   if(e.key==='Enter')submitOTP();
 }
+
+/* ── Touch ID / WebAuthn ── */
+function _webAuthnRP(){return{id:window.location.hostname,name:'toi.ai'};}
+function _b64url(buf){return btoa(String.fromCharCode.apply(null,new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');}
+function _fromB64url(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return Uint8Array.from(atob(s),function(c){return c.charCodeAt(0);});}
+function touchIDAvailable(){return!!(window.PublicKeyCredential&&navigator.credentials&&navigator.credentials.create);}
+function touchIDSetUp(){return!!localStorage.getItem('TOUCHID_CRED');}
+async function registerTouchID(){
+  if(!touchIDAvailable()){toast('WebAuthn not supported in this browser');return;}
+  if(!currentUser){toast('Log in first to set up Touch ID');return;}
+  try{
+    var challenge=crypto.getRandomValues(new Uint8Array(32));
+    var uid=new TextEncoder().encode(currentUser.id);
+    var cred=await navigator.credentials.create({publicKey:{
+      challenge:challenge,
+      rp:_webAuthnRP(),
+      user:{id:uid,name:currentUser.name,displayName:currentUser.name},
+      pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},
+      timeout:60000
+    }});
+    var store={credId:_b64url(cred.rawId),userId:currentUser.id,name:currentUser.name};
+    localStorage.setItem('TOUCHID_CRED',JSON.stringify(store));
+    sfxSuccess();toast('Touch ID enabled — use it to sign in next time ✓');
+    /* Refresh login button visibility */
+    _touchIDCheck();
+    /* Close any open admin panel */
+    var p=document.getElementById('adm-edit-panel');if(p)p.remove();
+    renderAdmin();
+  }catch(e){
+    if(e.name==='NotAllowedError'){toast('Touch ID cancelled');}
+    else{sfxError();toast('Touch ID setup failed: '+e.message);}
+  }
+}
+async function loginWithTouchID(){
+  if(!touchIDAvailable()||!touchIDSetUp()){return;}
+  var store=JSON.parse(localStorage.getItem('TOUCHID_CRED'));
+  var btn=document.getElementById('touchid-btn');
+  if(btn){btn.disabled=true;btn.style.opacity='0.6';}
+  try{
+    var challenge=crypto.getRandomValues(new Uint8Array(32));
+    var credId=_fromB64url(store.credId);
+    await navigator.credentials.get({publicKey:{
+      challenge:challenge,
+      allowCredentials:[{type:'public-key',id:credId}],
+      userVerification:'required',
+      timeout:60000
+    }});
+    /* Biometric passed — find the user and log in */
+    if(!TOI_USERS.length)seedDefaultUsers();else patchUsers();
+    var user=TOI_USERS.find(function(u){return u.id===store.userId;});
+    if(!user&&store.userId==='u_ahsan')user={id:'u_ahsan',name:'Ahsan',role:'superadmin',password:'qysbAh-ramjeg-wizki8',access:{all:true,chat:true},phone:'+14389220274',twoFA:true};
+    if(user){
+      /* Skip 2FA for Touch ID — biometric IS the second factor */
+      completeLogin(user);
+    }else{sfxError();toast('User not found — log in with your passkey');}
+  }catch(e){
+    if(e.name!=='NotAllowedError'){sfxError();toast('Touch ID failed — use your passkey');}
+  }
+  if(btn){btn.disabled=false;btn.style.opacity='';}
+}
+function removeTouchID(){
+  localStorage.removeItem('TOUCHID_CRED');
+  sfxPop();toast('Touch ID removed');
+  _touchIDCheck();
+  renderAdmin();
+}
+function _touchIDCheck(){
+  var wrap=document.getElementById('touchid-btn-wrap');
+  if(wrap)wrap.style.display=(touchIDAvailable()&&touchIDSetUp())?'':'none';
+}
+window.addEventListener('load',function(){setTimeout(_touchIDCheck,400);});
 function applyClientAccess(){
   var role=(currentUser&&currentUser.role)||'client';
   if(role==='superadmin'||role==='admin'){document.querySelectorAll('.sel-card-wrap').forEach(function(w){w.style.display='';});subMenuCache={};return;}
@@ -4655,7 +4736,20 @@ function adminRenderUsers(){
   '<div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3)">All Users</div>'+
   '<button class="adm-btn primary" onclick="adminShowAdd()">+ Add User</button>'+
   '</div>'+
-  '<div class="adm-user-grid">'+(userCards||'<div class="adm-empty">No users yet.</div>')+'</div>';
+  '<div class="adm-user-grid">'+(userCards||'<div class="adm-empty">No users yet.</div>')+'</div>'+
+  /* Touch ID section for current user */
+  (touchIDAvailable()?'<div style="margin-top:28px;padding:16px 18px;background:var(--surface);border:0.5px solid var(--border);border-radius:10px">'+
+  '<div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Touch ID / Biometric</div>'+
+  '<div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6">'+
+  (touchIDSetUp()?'Touch ID is <strong style="color:var(--accent2)">enabled</strong> for your account. You can sign in with your fingerprint or face.':'Set up Touch ID to sign in without typing your passkey.')+
+  '</div>'+
+  (touchIDSetUp()?
+    '<div style="display:flex;gap:8px">'+
+    '<button class="adm-btn primary" onclick="registerTouchID()">Update Touch ID</button>'+
+    '<button class="adm-btn danger" onclick="removeTouchID()">Remove</button>'+
+    '</div>':
+    '<button class="adm-btn primary" onclick="registerTouchID()">Set Up Touch ID</button>')+
+  '</div>':'');
 }
 function adminRenderPayments(){
   var sc=getStripeConfig();
