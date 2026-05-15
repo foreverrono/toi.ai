@@ -2709,6 +2709,16 @@ async function renderTrading(){
   '<button class="trading-search-btn" onclick="tradeLogAdd()" style="height:32px;align-self:end">Log</button>'+
   '</div></div>'+
   '<div id="trade-log-section"></div>'+
+  '<div class="trading-section-title" style="margin-top:28px">AI Signals</div>'+
+  '<div style="background:rgba(123,108,255,0.06);border:0.5px solid rgba(123,108,255,0.25);border-radius:12px;padding:18px 20px;margin-bottom:12px">'+
+  '<div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.6">AI analyses live prices, political climate, sector trends, and company news to generate buy/sell signals with target entry prices. Scans your full watchlist.</div>'+
+  '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">'+
+  '<button class="trading-search-btn" onclick="tradingRunSignals()" id="signals-btn" style="background:rgba(123,108,255,0.18);border-color:rgba(123,108,255,0.5);padding:10px 20px;font-size:12px">⚡ Run AI Signals</button>'+
+  '<button class="trading-search-btn" onclick="tradingMarketScan()" id="scan-btn" style="padding:10px 20px;font-size:12px">📊 Market Scanner</button>'+
+  '</div>'+
+  '<div id="trading-scanner" style="display:none;margin-bottom:16px"></div>'+
+  '<div id="trading-signals"></div>'+
+  '</div>'+
   '</div>';
   /* Load data async */
   loadTradingData();
@@ -2809,6 +2819,107 @@ function tradingShowLog(){
   });
   logHtml+='</tbody></table></div>';
   container.innerHTML=posHtml+logHtml;
+}
+
+async function tradingMarketScan(){
+  var btn=document.getElementById('scan-btn');
+  var box=document.getElementById('trading-scanner');
+  if(!box)return;
+  if(btn){btn.disabled=true;btn.textContent='Scanning…';}
+  box.style.display='';
+  box.innerHTML='<div style="font-size:11px;color:var(--text3);padding:10px 0">Fetching live prices…</div>';
+  var quotes=await Promise.all(WATCHLIST.map(fetchQuote));
+  var up=quotes.filter(function(q){return q.pct>0.05;}).sort(function(a,b){return b.pct-a.pct;});
+  var down=quotes.filter(function(q){return q.pct<-0.05;}).sort(function(a,b){return a.pct-b.pct;});
+  var flat=quotes.filter(function(q){return Math.abs(q.pct)<=0.05;});
+  function card(q,col){
+    var arrow=q.pct>0?'▲':'▼';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.02);border-radius:8px;margin-bottom:5px;border:0.5px solid rgba(255,255,255,0.05)">'+
+    '<div style="display:flex;align-items:center;gap:10px">'+
+    '<span style="font-size:12px;font-weight:500;color:var(--text);min-width:60px">'+q.sym+'</span>'+
+    '<span style="font-size:10px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+q.name+'</span>'+
+    '</div>'+
+    '<div style="display:flex;align-items:center;gap:12px">'+
+    sparkSVG(q.closes)+
+    '<span style="font-size:12px;color:var(--text2)">'+fmtPrice(q.price)+'</span>'+
+    '<span style="font-size:12px;color:'+col+';font-weight:500;min-width:60px;text-align:right">'+arrow+' '+(q.pct>=0?'+':'')+q.pct.toFixed(2)+'%</span>'+
+    '</div></div>';
+  }
+  var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  html+='<div><div style="font-size:9px;letter-spacing:0.12em;color:#4ef0c4;margin-bottom:8px">▲ MOVING UP ('+up.length+')</div>';
+  html+=up.length?up.map(function(q){return card(q,'#4ef0c4');}).join(''):'<div style="font-size:11px;color:var(--text3);padding:8px">None today</div>';
+  html+='</div>';
+  html+='<div><div style="font-size:9px;letter-spacing:0.12em;color:rgba(255,107,107,0.9);margin-bottom:8px">▼ MOVING DOWN ('+down.length+')</div>';
+  html+=down.length?down.map(function(q){return card(q,'rgba(255,107,107,0.9)');}).join(''):'<div style="font-size:11px;color:var(--text3);padding:8px">None today</div>';
+  html+='</div>';
+  html+='</div>';
+  if(flat.length){
+    html+='<div style="margin-top:10px"><div style="font-size:9px;letter-spacing:0.12em;color:var(--text3);margin-bottom:6px">FLAT ('+flat.length+')</div>';
+    html+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    flat.forEach(function(q){html+='<span style="font-size:11px;color:var(--text3);background:var(--surface);border:0.5px solid var(--border);padding:4px 10px;border-radius:20px">'+q.sym+' '+fmtPrice(q.price)+'</span>';});
+    html+='</div></div>';
+  }
+  box.innerHTML=html;
+  if(btn){btn.disabled=false;btn.textContent='📊 Market Scanner';}
+  sfxSuccess();
+}
+
+async function tradingRunSignals(){
+  var btn=document.getElementById('signals-btn');
+  var out=document.getElementById('trading-signals');
+  if(!out)return;
+  if(btn){btn.disabled=true;btn.textContent='Analysing…';}
+  out.innerHTML='<div style="font-size:11px;color:var(--text3);padding:10px 0">Fetching live prices for '+WATCHLIST.length+' symbols…</div>';
+  var quotes=await Promise.all(WATCHLIST.map(fetchQuote));
+  var priceLines=quotes.filter(function(q){return q.price;}).map(function(q){
+    var trend=q.closes.length>=2?(q.closes[q.closes.length-1]>q.closes[0]?'uptrend':'downtrend'):'unknown';
+    return q.sym+': $'+fmtPrice(q.price).replace('$','')+' | Today: '+(q.pct>=0?'+':'')+q.pct.toFixed(2)+'% | 5d trend: '+trend;
+  }).join('\n');
+  out.innerHTML='<div style="font-size:11px;color:var(--text3);padding:10px 0">Running AI analysis — politics, news, fundamentals…</div>';
+  var today=new Date().toISOString().slice(0,10);
+  var prompt='You are a professional stock analyst and political economist. Today is '+today+'.\n\nLive market data:\n'+priceLines+'\n\nFor each symbol:\n1. Classify as BUY / HOLD / SELL\n2. Give a specific recommended entry price (or price range) if BUY\n3. Give a 1-sentence reason covering: recent company news, political/macro factors (interest rates, tariffs, regulation, elections, geopolitics), and sector momentum\n\nFormat your response as a clean list, one stock per line:\n[SYMBOL] | [BUY/HOLD/SELL] | Entry: $X | Reason: ...\n\nBe specific, actionable, and concise. Base analysis on your knowledge of current macro conditions, sector trends, and company fundamentals as of your training cutoff.';
+  try{
+    var r=await fetch('/api/ai',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:prompt}]})
+    });
+    var d=await r.json();
+    var text=(d.content&&d.content[0]&&d.content[0].text)||'No signals generated.';
+    var lines=text.trim().split('\n').filter(function(l){return l.trim();});
+    var html='<div style="margin-bottom:8px;font-size:9px;letter-spacing:0.1em;color:var(--text3)">GENERATED '+today+' · BASED ON LIVE PRICES + AI MACRO ANALYSIS</div>';
+    lines.forEach(function(line){
+      var isBuy=/\bBUY\b/i.test(line);
+      var isSell=/\bSELL\b/i.test(line);
+      var isHold=/\bHOLD\b/i.test(line);
+      var border=isBuy?'rgba(78,240,196,0.3)':isSell?'rgba(255,107,107,0.3)':'rgba(255,255,255,0.06)';
+      var badge=isBuy?'<span style="background:rgba(78,240,196,0.15);color:#4ef0c4;font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;letter-spacing:0.08em">BUY</span>':
+                isSell?'<span style="background:rgba(255,107,107,0.12);color:rgba(255,107,107,0.9);font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;letter-spacing:0.08em">SELL</span>':
+                isHold?'<span style="background:rgba(255,255,255,0.06);color:var(--text3);font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;letter-spacing:0.08em">HOLD</span>':'';
+      var parts=line.split('|');
+      var sym=parts[0]?parts[0].trim():'';
+      var entry=parts[1]?parts[1].trim():'';
+      var entryStr=parts[2]?parts[2].trim():'';
+      var reason=parts[3]?parts[3].trim():'';
+      if(parts.length<3){
+        html+='<div style="padding:8px 12px;font-size:11px;color:var(--text3);line-height:1.6">'+line+'</div>';
+        return;
+      }
+      html+='<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:rgba(255,255,255,0.02);border:0.5px solid '+border+';border-radius:10px;margin-bottom:7px">'+
+      '<div style="min-width:60px"><div style="font-size:13px;font-weight:500;color:var(--text)">'+sym+'</div>'+badge+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+      '<div style="font-size:11px;color:var(--accent2);margin-bottom:3px">'+entryStr+'</div>'+
+      '<div style="font-size:11px;color:var(--text3);line-height:1.5">'+reason+'</div>'+
+      '</div></div>';
+    });
+    html+='<div style="font-size:9px;color:var(--text3);margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">⚠ AI analysis is informational only — not financial advice. Always do your own research before trading.</div>';
+    out.innerHTML=html;
+    sfxSuccess();
+  }catch(e){
+    out.innerHTML='<div style="font-size:11px;color:rgba(255,107,107,0.8)">Error: '+(e.message||'Check connection')+'</div>';
+    sfxError();
+  }
+  if(btn){btn.disabled=false;btn.textContent='⚡ Run AI Signals';}
 }
 
 /* ════════════════════════════════════════
