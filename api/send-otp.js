@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   if (sid && token && from) {
     try {
-      const body = new URLSearchParams({ To: phone, From: from, Body: `Your toi.ai code is ${otp}. Valid 5 min.` });
+      const body = new URLSearchParams({ To: phone, From: from, Body: `Your PackFastTMS code is ${otp}. Valid 5 min.` });
       const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
         method: 'POST',
         headers: {
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     }
   } else {
     /* Dev mode — no Twilio configured, log OTP to console only */
-    console.log(`[toi 2FA] OTP for ${phone}: ${otp}`);
+    console.log(`[PackFastTMS 2FA] OTP for ${phone}: ${otp}`);
   }
 
   res.json({ sig, expiry });
